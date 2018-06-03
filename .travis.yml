@@ -10,7 +10,7 @@ perl:
   - "5.12"
   - "5.10"
   - "5.8"
-  - "bleed"
+  - "blead"
 sudo: false
 matrix:
   include:
