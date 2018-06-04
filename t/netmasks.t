@@ -268,7 +268,7 @@ ok(@e == 2);
 is(dlist(@{$e[0]}), '216.240.32.128/25 216.240.33.0/24');
 is(dlist(@{$e[1]}), '216.240.36.0/25');
 
-sub dlist 
+sub dlist
 {
 	my (@b) = @_;
 	return join (' ', map { $_->desc() } @b);
@@ -333,7 +333,7 @@ for my $i (qw(216.240.32.0/24 216.240.32.0/26 216.240.33.0/25)) {
 	ok ($q144->cmpblocks($i));
 }
 
-my $q144pp = new Net::Netmask '216.240.32.0/25'; 
+my $q144pp = new Net::Netmask '216.240.32.0/25';
 ok (($q144 == $q144pp));
 ok (($q144 eq $q144pp));
 ok (($q144->desc eq "$q144"));

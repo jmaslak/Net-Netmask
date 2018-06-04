@@ -5,7 +5,7 @@
 # faster for sorting IP addresses.  I've decied that I won't
 # accept undocumented claims anymore.
 #
-# This file provides a way to test out sort functions.  If you 
+# This file provides a way to test out sort functions.  If you
 # think you've got a faster one, please try re-defining &mysortfunc.
 # If it's faster, let me know.  If it's not, don't.
 #

@@ -26,7 +26,7 @@ my $cidr30 = make_nm( '10.0.0.0/30' );
 my $cidr24 = make_nm( '10.0.0.0/24' );
 
 throws_ok
-	{ $cidr30->split(3) } 
+	{ $cidr30->split(3) }
 	qr/^Parts count must be a number of base 2. Got: 3/,
 	"Non base 2 split count errors.";
 
@@ -45,19 +45,19 @@ throws_ok
 	qr/^Parts must be defined and greater than 0./ ,
 	"Negative split count errors";
 
-throws_ok 
-	{ $cidr32->split(2) } 
+throws_ok
+	{ $cidr32->split(2) }
 	qr/^Netmask only contains 1 IPs. Cannot split into 2./ ,
 	"32 cannot be split";
 
-is 
-	$cidr24->split( 2 ) , 
+is
+	$cidr24->split( 2 ) ,
 	map( { make_nm( "10.0.0.$_" . "/25" ) } ( 0 , 128 ) ),
 	'Can split /24 into 2 25s'
 ;
 
-is 
-	$cidr24->split( 256 ) , 
+is
+	$cidr24->split( 256 ) ,
 	map( { make_nm "10.0.0.$_" } ( 0..255 ) ) ,
 	'Can split into 32s (i.e $parts = $self->size)'
 ;
