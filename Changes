@@ -1,6 +1,10 @@
 
 Revision history for Perl module Net::Netmask
 
+1.9023 2018-06-02
+
+ - Change from ANDK: fix precision issue on long-double platforms
+
 1.9022 2015-05-05
 
  - Changes from adamherzog: minor cleanups plus
