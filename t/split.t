@@ -11,15 +11,15 @@ sub throws_ok(&$$) {
 	};
 
 	my $err = $@;
-	
+
 	like( $err , $regex );
-	
-}	
+
+}
 
 sub make_nm {
 	my ($cidr_str) = @_;
 	Net::Netmask->new( $cidr_str );
-}	
+}
 
 my $cidr32 = make_nm( '10.0.0.0/32' );
 my $cidr30 = make_nm( '10.0.0.0/30' );
