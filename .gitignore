@@ -1,4 +1,4 @@
-Net-Netmask-*.tar.gz
+Net-Netmask-*
 
 # See https://github.com/github/gitignore/blob/master/Perl.gitignore
 /blib/
