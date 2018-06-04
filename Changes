@@ -3,7 +3,7 @@ Revision history for Perl module Net::Netmask
 
 1.9023 2018-06-02
 
- - Change from ANDK: fix precision issue on long-double platforms
+ - fix precision issue on long-double platforms (BAYMAX)
  - Convert to dist.zilla
  - Minor formatting changes
 
