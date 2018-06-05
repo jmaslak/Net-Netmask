@@ -443,6 +443,12 @@ blocks will be collapsed.
 
 =back
 
+=head1 AUTHORS
+
+Joelle Maslak <jmaslak@antelope.net> (current maintainer)
+
+David Muir Sharnoff (original creator/author)
+
 =head1 LICENSE
 
 Copyright (C) 1998-2006 David Muir Sharnoff.
