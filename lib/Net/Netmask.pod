@@ -457,7 +457,7 @@ Copyright (C) 2011-2013 Google, Inc.
 
 Copyright (C) 2018 Joelle Maslak
 
-This module may be used, modified and redistributed on the same
+This module may be used, modified and redistributed under the same
 terms as Perl itself.
 
 =cut
