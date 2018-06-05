@@ -1,9 +1,12 @@
 
 Revision history for Perl module Net::Netmask
 
-1.9102 ?????????????
+1.9102 2018-06-05
  - DEV release only
- - Tidy/Critic improvements
+ - Convert tests to Test2
+ - Pass perlcritic tests
+ - Pass Kwalitee tests
+ - Add contributor information
 
 1.9101 2018-06-02
 
