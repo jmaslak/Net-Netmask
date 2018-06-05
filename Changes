@@ -1,6 +1,10 @@
 
 Revision history for Perl module Net::Netmask
 
+1.9102 ?????????????
+ - DEV release only
+ - Tidy/Critic improvements
+
 1.9101 2018-06-02
 
  - fix precision issue on long-double platforms (BAYMAX)
