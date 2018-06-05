@@ -1,7 +1,8 @@
 #!/usr/bin/perl -w
 
-use Test2::V0;
 use strict;
+
+use Test2::V0;
 
 use Net::Netmask;
 
