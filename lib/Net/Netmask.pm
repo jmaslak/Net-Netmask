@@ -161,10 +161,10 @@ sub base { my ($this) = @_; return int2quad( $this->{'IBASE'} ); }
 sub bits { my ($this) = @_; return $this->{'BITS'}; }
 sub size { my ($this) = @_; return 2**( 32 - $this->{'BITS'} ); }
 
-sub next {
+sub next {    ## no critic: (Subroutines::ProhibitBuiltinHomonyms)
     my ($this) = @_;
-    int2quad( $this->{'IBASE'} + $this->size() );
-}    ## no critic: (Subroutines::ProhibitBuiltinHomonyms)
+    return int2quad( $this->{'IBASE'} + $this->size() );
+}
 
 sub broadcast {
     my ($this) = @_;
