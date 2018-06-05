@@ -344,10 +344,6 @@ The return value is a list of Net::Netmask objects.
 
 =head1 OVERLOADING
 
-Overloading doesn't seem to work completely on perl before version
-5.6.1.  The test suite doesn't test overloading before that.  At
-least for sort.
-
 =over 25
 
 =item B<"">
