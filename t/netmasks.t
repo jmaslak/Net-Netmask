@@ -82,6 +82,7 @@ MAIN: {
         is( $x->mask(),     $newmask, "mask of $addr" );
         is( $x->maxblock(), $max,     "maxblock of $addr" );
         is( $x->bits(),     $bits,    "bits of $addr" );
+        is( $x->protocol(), 'IPv4',   "protocol of $addr" );
     }
 
     my @y;

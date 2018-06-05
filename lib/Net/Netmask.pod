@@ -22,6 +22,7 @@
  print $block->next()
  print $block->match($ip);
  print $block->nth(1, [$bitstep]);
+ print $block->protocol();
 
  if ($block->sameblock("network block")) ...
  if ($block->cmpblocks("network block")) ...
@@ -178,6 +179,13 @@ the broadcast address.) Eg: 192.168.1.0/24 => 192.168.2.0
 =item ->B<first>() & ->B<last>()
 
 Synonyms for ->B<base>() and ->B<broadcast>()
+
+=item ->B<protocol>()
+
+Added in version 1.9102.
+
+Returns the address family/protocol represented by the block.  Today,
+this will always be "IPv4".
 
 =item ->B<match>($ip)
 

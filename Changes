@@ -7,6 +7,8 @@ Revision history for Perl module Net::Netmask
  - Pass perlcritic tests
  - Pass Kwalitee tests
  - Add contributor information
+ - Add protocol() method (just a stub today that will always return
+   'IPv4')
 
 1.9101 2018-06-02
 

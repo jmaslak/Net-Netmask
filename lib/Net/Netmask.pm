@@ -1,3 +1,4 @@
+## Please see file perltidy.ERR
 # Copyright (C) 1998-2006 David Muir Sharnoff <muir@idiom.org>
 # Copyright (C) 2011-2013 Google, Inc.
 # Copyright (C) 2018 Joelle Maslak <jmaslak@antelope.net>
@@ -141,8 +142,9 @@ sub new {
       if defined $ibase;
 
     return bless {
-        'IBASE' => $ibase,
-        'BITS'  => $bits,
+        'IBASE'    => $ibase,
+        'BITS'     => $bits,
+        'PROTOCOL' => 'IPv4',
         ( $error ? ( 'ERROR' => $error ) : () ),
     };
 }
@@ -157,9 +159,10 @@ sub new2 {
 sub errstr { return $error; }
 sub debug { my $this = shift; return ( @_ ? $debug = shift : $debug ) }
 
-sub base { my ($this) = @_; return int2quad( $this->{'IBASE'} ); }
-sub bits { my ($this) = @_; return $this->{'BITS'}; }
-sub size { my ($this) = @_; return 2**( 32 - $this->{'BITS'} ); }
+sub base     { my ($this) = @_; return int2quad( $this->{'IBASE'} ); }
+sub bits     { my ($this) = @_; return $this->{'BITS'}; }
+sub size     { my ($this) = @_; return 2**( 32 - $this->{'BITS'} ); }
+sub protocol { my ($this) = @_; return $this->{'PROTOCOL'}; }
 
 sub next {    ## no critic: (Subroutines::ProhibitBuiltinHomonyms)
     my ($this) = @_;
@@ -422,6 +425,7 @@ sub nextblock {
     my $newblock = bless {
         IBASE => $this->{IBASE} + $index * ( 2**( 32 - $this->{BITS} ) ),
         BITS => $this->{BITS},
+        PROTOCOL => $this->{PROTOCOL},
     };
     return if $newblock->{IBASE} >= 2**32;
     return if $newblock->{IBASE} < 0;
@@ -461,7 +465,8 @@ sub irange2cidrlist {
             @result,
             bless {
                 'IBASE' => $start,
-                'BITS'  => $maxsize
+                'BITS'  => $maxsize,
+                'PROTOCOL' => 'IPv4',
             }
         );
         $start += 2**( 32 - $maxsize );
