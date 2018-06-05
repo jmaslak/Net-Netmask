@@ -2,11 +2,14 @@
 # Copyright (C) 2011-2013 Google, Inc.
 # Copyright (C) 2018 Joelle Maslak <jmaslak@antelope.net>
 
-use 5.006_001;
-
 package Net::Netmask;
 
+use 5.006_001;
+
 # ABSTRACT: Understand and manipulate IP netmasks
+
+# Disable one-arg bless to preserve the existing interface.
+## no critic (ClassHierarchies::ProhibitOneArgBless)
 
 require Exporter;
 @ISA = qw(Exporter);
@@ -147,7 +150,7 @@ sub new2
 {
 	local($debug) = 0;
 	my $net = new(@_);
-	return undef if $error;
+	return if $error;
 	return $net;
 }
 
@@ -157,12 +160,12 @@ sub debug  { my $this = shift; return (@_ ? $debug = shift : $debug) }
 sub base { my ($this) = @_; return int2quad($this->{'IBASE'}); }
 sub bits { my ($this) = @_; return $this->{'BITS'}; }
 sub size { my ($this) = @_; return 2**(32- $this->{'BITS'}); }
-sub next { my ($this) = @_; int2quad($this->{'IBASE'} + $this->size()); }
+sub next { my ($this) = @_; int2quad($this->{'IBASE'} + $this->size()); } ## no critic: (Subroutines::ProhibitBuiltinHomonyms)
 
 sub broadcast
 {
 	my($this) = @_;
-	int2quad($this->{'IBASE'} + $this->size() - 1);
+	return int2quad($this->{'IBASE'} + $this->size() - 1);
 }
 
 *first = \&base;
@@ -201,8 +204,8 @@ sub nth
 	my $increment = 2**(32-$bitstep);
 	$index *= $increment;
 	$index += $size if $index < 0;
-	return undef if $index < 0;
-	return undef if $index >= $size;
+	return if $index < 0;
+	return if $index >= $size;
 	return int2quad($ibase+$index);
 }
 
@@ -248,7 +251,7 @@ sub quad2int
 {
 	my @bytes = split(/\./,$_[0]);
 
-	return undef unless @bytes == 4 && ! grep {!(/\d+$/ && $_<256)} @bytes;
+	return unless @bytes == 4 && ! grep {!(/\d+$/ && $_<256)} @bytes;
 
 	return unpack("N",pack("C4",@bytes));
 }
@@ -271,7 +274,7 @@ sub storeNetblock
 	my $bits = $this->{'BITS'};
 	my $i = $bits - $mb;
 
-	$t->{$base}->[$i] = $this;
+	return ( $t->{$base}->[$i] = $this );
 }
 
 sub deleteNetblock
@@ -292,7 +295,7 @@ sub deleteNetblock
 	for my $x (@{$t->{$base}}) {
 		return if $x;
 	}
-	delete $t->{$base};
+	return delete $t->{$base};
 }
 
 sub findNetblock
@@ -317,7 +320,7 @@ sub findNetblock
 			$i--;
 		}
 	}
-	return undef;
+	return;
 }
 
 sub findOuterNetblock
@@ -348,7 +351,7 @@ sub findOuterNetblock
 			$i--;
 		}
 	}
-	return undef;
+	return;
 }
 
 sub findAllNetblock
@@ -383,13 +386,14 @@ sub dumpNetworkTable
 
 	my @ary;
 	foreach my $base (keys %$t) {
-		push(@ary, grep (defined($_), @{$t->{base}}));
+		push @ary, grep { defined($_) } @{$t->{base}};
 		for my $x (@{$t->{$base}}) {
 			push(@ary, $x)
 				if defined $x;
 		}
 	}
-	return sort @ary;
+
+	return (sort @ary);
 }
 
 sub checkNetblock
@@ -432,8 +436,8 @@ sub nextblock
 		IBASE	=> $this->{IBASE} + $index * (2**(32- $this->{BITS})),
 		BITS	=> $this->{BITS},
 	};
-	return undef if $newblock->{IBASE} >= 2**32;
-	return undef if $newblock->{IBASE} < 0;
+	return if $newblock->{IBASE} >= 2**32;
+	return if $newblock->{IBASE} < 0;
 	return $newblock;
 }
 
@@ -542,7 +546,7 @@ sub cidrs2inverse
 
 sub by_net_netmask_block
 {
-	$a->{'IBASE'} <=> $b->{'IBASE'}
+	return $a->{'IBASE'} <=> $b->{'IBASE'}
 		|| $a->{'BITS'} <=> $b->{'BITS'};
 }
 
@@ -579,23 +583,23 @@ sub cmp_net_netmask_block
 sub sort_network_blocks
 {
 	return
-		map $_->[0],
+		map { $_->[0] }
 		sort { $a->[1] <=> $b->[1] || $a->[2] <=> $b->[2] }
-		map [ $_, $_->{IBASE}, $_->{BITS} ], @_;
+		map { [ $_, $_->{IBASE}, $_->{BITS} ] } @_;
 
 }
 
 sub sort_by_ip_address
 {
 	return
-		map $_->[0],
+		map { $_->[0] }
 		sort { $a->[1] cmp $b->[1] }
-		map [ $_, pack("C4",split(/\./,$_)) ], @_;
+		map { [ $_, pack("C4",split(/\./,$_)) ] } @_;
 
 }
 
 
-sub split
+sub split  ## no critic: (Subroutines::ProhibitBuiltinHomonyms)
 {
 	my ($self , $parts) = @_;
 
