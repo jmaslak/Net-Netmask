@@ -81,7 +81,7 @@ sub new {
             $error = "illegal netmask: $mask";
         }
     } elsif ( ( $net =~ m,^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$, )
-        && ( $mask =~ m,0x[a-f0-9]+,ai ) )
+        && ( $mask =~ m,0x[a-f0-9]+,i ) )
     {
         $base = $net;
         my $imask = hex($mask);
