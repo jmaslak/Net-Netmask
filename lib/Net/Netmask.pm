@@ -90,13 +90,13 @@ sub new {
         } else {
             $error = "illegal netmask: $mask ($imask)";
         }
-    } elsif ( $net =~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/a && !$mask ) {
+    } elsif ( $net =~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/ && !$mask ) {
         ( $base, $bits ) = ( $net, 32 );
-    } elsif ( $net =~ /^[0-9]+\.[0-9]+\.[0-9]+$/a && !$mask ) {
+    } elsif ( $net =~ /^[0-9]+\.[0-9]+\.[0-9]+$/ && !$mask ) {
         ( $base, $bits ) = ( "$net.0", 24 );
-    } elsif ( $net =~ /^[0-9]+\.[0-9]+$/a && !$mask ) {
+    } elsif ( $net =~ /^[0-9]+\.[0-9]+$/ && !$mask ) {
         ( $base, $bits ) = ( "$net.0.0", 16 );
-    } elsif ( $net =~ /^[0-9]+$/a && !$mask ) {
+    } elsif ( $net =~ /^[0-9]+$/ && !$mask ) {
         ( $base, $bits ) = ( "$net.0.0.0", 8 );
     } elsif ( $net =~ m,^([0-9]+\.[0-9]+\.[0-9]+)/([0-9]+)$, ) {
         ( $base, $bits ) = ( "$1.0", $2 );
@@ -252,7 +252,7 @@ sub tag {
 sub quad2int {
     my @bytes = split( /\./, $_[0] );
 
-    return unless @bytes == 4 && !grep { !( /[0-9]+$/a && $_ < 256 ) } @bytes;
+    return unless @bytes == 4 && !grep { !( /[0-9]+$/ && $_ < 256 ) } @bytes;
 
     return unpack( "N", pack( "C4", @bytes ) );
 }
