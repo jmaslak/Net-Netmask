@@ -13,29 +13,25 @@ ok( Net::Netmask->debug($debug) == $debug, "unable to set debug" );
 # test a variety of ip's with bytes greater than 255.
 # all these tests should return undef
 
-todo 'Github issue #4' => sub {
+my @tests = (
+    {
+        input => ['١٠٠.١٠٠.١٠٠.١٠٠/32'],
+        error => qr/^could not parse /,
+        type  => 'bad net byte',
+    },
+);
 
-    my @tests = (
-        {
-            input => ['١٠٠.١٠٠.١٠٠.١٠٠/32'],
-            error => qr/^could not parse /,
-            type  => 'bad net byte',
-        },
-    );
+foreach my $test (@tests) {
+    my $input = $test->{input};
+    my $err   = $test->{error};
+    my $name  = ( join ', ', @{ $test->{input} } );
+    my $type  = $test->{type};
 
-    foreach my $test (@tests) {
-        my $input = $test->{input};
-        my $err   = $test->{error};
-        my $name  = ( join ', ', @{ $test->{input} } );
-        my $type  = $test->{type};
+    my $result = Net::Netmask->new2(@$input);
 
-        my $result = Net::Netmask->new2(@$input);
-
-        is( $result, undef, "$name $type" );
-        like( Net::Netmask->errstr, $err, "$name errstr mismatch" );
-    }
-
-};
+    is( $result, undef, "$name $type" );
+    like( Net::Netmask->errstr, $err, "$name errstr mismatch" );
+}
 
 done_testing;
 
