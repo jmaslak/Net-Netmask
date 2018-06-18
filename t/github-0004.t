@@ -2,6 +2,7 @@
 
 use strict;
 
+use utf8;
 use Test2::V0;
 
 use Net::Netmask;

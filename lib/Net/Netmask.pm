@@ -1,4 +1,3 @@
-## Please see file perltidy.ERR
 # Copyright (C) 1998-2006 David Muir Sharnoff <muir@idiom.org>
 # Copyright (C) 2011-2013 Google, Inc.
 # Copyright (C) 2018 Joelle Maslak <jmaslak@antelope.net>
@@ -54,9 +53,9 @@ sub new {
     my $ibase;
     undef $error;
 
-    if ( $net =~ m,^(\d+\.\d+\.\d+\.\d+)/(\d+)$,a ) {
+    if ( $net =~ m,^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)/([0-9]+)$, ) {
         ( $base, $bits ) = ( $1, $2 );
-    } elsif ( $net =~ m,^(\d+\.\d+\.\d+\.\d+)[:/](\d+\.\d+\.\d+\.\d+)$,a ) {
+    } elsif ( $net =~ m,^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)[:/]([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)$, ) {
         $base = $1;
         my $quadmask = $2;
         if ( exists $quadmask2bits{$quadmask} ) {
@@ -64,7 +63,7 @@ sub new {
         } else {
             $error = "illegal netmask: $quadmask";
         }
-    } elsif ( $net =~ m,^(\d+\.\d+\.\d+\.\d+)[#](\d+\.\d+\.\d+\.\d+)$,a ) {
+    } elsif ( $net =~ m,^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)[#]([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)$, ) {
         $base = $1;
         my $hostmask = $2;
         if ( exists $quadhostmask2bits{$hostmask} ) {
@@ -72,8 +71,8 @@ sub new {
         } else {
             $error = "illegal hostmask: $hostmask";
         }
-    } elsif ( ( $net =~ m,^\d+\.\d+\.\d+\.\d+$,a )
-        && ( $mask =~ m,\d+\.\d+\.\d+\.\d+$,a ) )
+    } elsif ( ( $net =~ m,^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$, )
+        && ( $mask =~ m,[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$, ) )
     {
         $base = $net;
         if ( exists $quadmask2bits{$mask} ) {
@@ -81,7 +80,7 @@ sub new {
         } else {
             $error = "illegal netmask: $mask";
         }
-    } elsif ( ( $net =~ m,^\d+\.\d+\.\d+\.\d+$,a )
+    } elsif ( ( $net =~ m,^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$, )
         && ( $mask =~ m,0x[a-f0-9]+,ai ) )
     {
         $base = $net;
@@ -91,23 +90,24 @@ sub new {
         } else {
             $error = "illegal netmask: $mask ($imask)";
         }
-    } elsif ( $net =~ /^\d+\.\d+\.\d+\.\d+$/a && !$mask ) {
+    } elsif ( $net =~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/a && !$mask ) {
         ( $base, $bits ) = ( $net, 32 );
-    } elsif ( $net =~ /^\d+\.\d+\.\d+$/a && !$mask ) {
+    } elsif ( $net =~ /^[0-9]+\.[0-9]+\.[0-9]+$/a && !$mask ) {
         ( $base, $bits ) = ( "$net.0", 24 );
-    } elsif ( $net =~ /^\d+\.\d+$/a && !$mask ) {
+    } elsif ( $net =~ /^[0-9]+\.[0-9]+$/a && !$mask ) {
         ( $base, $bits ) = ( "$net.0.0", 16 );
-    } elsif ( $net =~ /^\d+$/a && !$mask ) {
+    } elsif ( $net =~ /^[0-9]+$/a && !$mask ) {
         ( $base, $bits ) = ( "$net.0.0.0", 8 );
-    } elsif ( $net =~ m,^(\d+\.\d+\.\d+)/(\d+)$,a ) {
+    } elsif ( $net =~ m,^([0-9]+\.[0-9]+\.[0-9]+)/([0-9]+)$, ) {
         ( $base, $bits ) = ( "$1.0", $2 );
-    } elsif ( $net =~ m,^(\d+\.\d+)/(\d+)$,a ) {
+    } elsif ( $net =~ m,^([0-9]+\.[0-9]+)/([0-9]+)$, ) {
         ( $base, $bits ) = ( "$1.0.0", $2 );
-    } elsif ( $net =~ m,^(\d+)/(\d+)$,a ) {
+    } elsif ( $net =~ m,^([0-9]+)/([0-9]+)$, ) {
         ( $base, $bits ) = ( "$1.0.0.0", $2 );
     } elsif ( $net eq 'default' || $net eq 'any' ) {
         ( $base, $bits ) = ( "0.0.0.0", 0 );
-    } elsif ( $net =~ m,^(\d+\.\d+\.\d+\.\d+)\s*-\s*(\d+\.\d+\.\d+\.\d+)$,a ) {
+    } elsif ( $net =~ m,^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\s*-\s*([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)$, )
+    {
         # whois format
         $ibase = quad2int($1);
         my $end = quad2int($2);
@@ -252,7 +252,7 @@ sub tag {
 sub quad2int {
     my @bytes = split( /\./, $_[0] );
 
-    return unless @bytes == 4 && !grep { !( /\d+$/a && $_ < 256 ) } @bytes;
+    return unless @bytes == 4 && !grep { !( /[0-9]+$/a && $_ < 256 ) } @bytes;
 
     return unpack( "N", pack( "C4", @bytes ) );
 }
@@ -423,8 +423,8 @@ sub nextblock {
     my ( $this, $index ) = @_;
     $index = 1 unless defined $index;
     my $newblock = bless {
-        IBASE => $this->{IBASE} + $index * ( 2**( 32 - $this->{BITS} ) ),
-        BITS => $this->{BITS},
+        IBASE    => $this->{IBASE} + $index * ( 2**( 32 - $this->{BITS} ) ),
+        BITS     => $this->{BITS},
         PROTOCOL => $this->{PROTOCOL},
     };
     return if $newblock->{IBASE} >= 2**32;
@@ -464,8 +464,8 @@ sub irange2cidrlist {
         push(
             @result,
             bless {
-                'IBASE' => $start,
-                'BITS'  => $maxsize,
+                'IBASE'    => $start,
+                'BITS'     => $maxsize,
                 'PROTOCOL' => 'IPv4',
             }
         );
