@@ -416,15 +416,15 @@ sub match {
 
 sub maxblock {
     my ($this) = @_;
-    return imaxblock( $this->{'IBASE'}, $this->{'BITS'} );
+    return ( !defined $this->{ERROR} ) ? imaxblock( $this->{IBASE}, $this->{BITS} ) : undef;
 }
 
 sub nextblock {
     my ( $this, $index ) = @_;
     $index = 1 unless defined $index;
     my $newblock = bless {
-        IBASE => $this->{IBASE} + $index * ( 2**( 32 - $this->{BITS} ) ),
-        BITS => $this->{BITS},
+        IBASE    => $this->{IBASE} + $index * ( 2**( 32 - $this->{BITS} ) ),
+        BITS     => $this->{BITS},
         PROTOCOL => $this->{PROTOCOL},
     };
     return if $newblock->{IBASE} >= 2**32;
@@ -464,8 +464,8 @@ sub irange2cidrlist {
         push(
             @result,
             bless {
-                'IBASE' => $start,
-                'BITS'  => $maxsize,
+                'IBASE'    => $start,
+                'BITS'     => $maxsize,
                 'PROTOCOL' => 'IPv4',
             }
         );

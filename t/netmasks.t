@@ -38,6 +38,7 @@ MAIN: {
       209.157/17                  u             209.157.0.0     255.255.128.0   17 16 IPv4     0
       default                     u             0.0.0.0         0.0.0.0         0  0  IPv4     0
       209.157.68.22_0.0.31.255    u             209.157.64.0    255.255.224.0   19 18 IPv4     0
+      2001:db8::/32               u             2001:db8::      u               32 29 IPv6     1
     );
 
     my @store = qw(
@@ -80,20 +81,24 @@ MAIN: {
 
         diag "$addr $mask $base $newmask $bits $max $proto $todo";
 
-        $mask = undef if $mask eq 'u';
+        $mask    = undef if $mask eq 'u';
+        $newmask = undef if $newmask eq 'u';
 
         my $test = sub {
             $x = Net::Netmask->new( $addr, $mask );
+            ok( $x, "parsed $addr ");
 
-            is( $x->base(),     $base,    "base of $addr" );
-            is( $x->mask(),     $newmask, "mask of $addr" );
-            is( $x->maxblock(), $max,     "maxblock of $addr" );
-            is( $x->bits(),     $bits,    "bits of $addr" );
-            is( $x->protocol(), $proto,   "protocol of $addr" );
+            if (defined($x)) {
+                is( $x->base(),     $base,    "base of $addr" );
+                is( $x->mask(),     $newmask, "mask of $addr" );
+                is( $x->maxblock(), $max,     "maxblock of $addr" );
+                is( $x->bits(),     $bits,    "bits of $addr" );
+                is( $x->protocol(), $proto,   "protocol of $addr" );
+            }
         };
 
         if ($todo) {
-            todo 'marked as todo' => $test->();
+            todo 'marked as todo' => $test;
         } else {
             $test->();
         }
