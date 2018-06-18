@@ -20,24 +20,25 @@ use Net::Netmask qw(
 use Carp qw(verbose);
 
 MAIN: {
-    #  addr                       mask          base            newmask       bits mb
+    # Note that _ in the addr gets replaced with a '#'
+    #  addr                       mask          base            newmask       bits mb proto todo
     my @rtests = qw(
-      209.157.68.22:255.255.224.0 u             209.157.64.0    255.255.224.0   19 18
-      209.157.68.22               255.255.224.0 209.157.64.0    255.255.224.0   19 18
-      209.157.70.33               0xffffe000    209.157.64.0    255.255.224.0   19 18
-      209.157.70.33/19            u             209.157.64.0    255.255.224.0   19 18
-      209.157.70.33               u             209.157.70.33   255.255.255.255 32 32
-      140.174.82                  u             140.174.82.0    255.255.255.0   24 23
-      140.174                     u             140.174.0.0     255.255.0.0     16 15
-      10                          u             10.0.0.0        255.0.0.0       8  7
-      10/8                        u             10.0.0.0        255.0.0.0       8  7
-      209.157.64/19               u             209.157.64.0    255.255.224.0   19 18
-      209.157.64.0-209.157.95.255 u             209.157.64.0    255.255.224.0   19 18
-      216.140.48.16/32            u             216.140.48.16   255.255.255.255 32 28
-      209.157/17                  u             209.157.0.0     255.255.128.0   17 16
-      default                     u             0.0.0.0         0.0.0.0         0  0
+      209.157.68.22:255.255.224.0 u             209.157.64.0    255.255.224.0   19 18 IPv4     0
+      209.157.68.22               255.255.224.0 209.157.64.0    255.255.224.0   19 18 IPv4     0
+      209.157.70.33               0xffffe000    209.157.64.0    255.255.224.0   19 18 IPv4     0
+      209.157.70.33/19            u             209.157.64.0    255.255.224.0   19 18 IPv4     0
+      209.157.70.33               u             209.157.70.33   255.255.255.255 32 32 IPv4     0
+      140.174.82                  u             140.174.82.0    255.255.255.0   24 23 IPv4     0
+      140.174                     u             140.174.0.0     255.255.0.0     16 15 IPv4     0
+      10                          u             10.0.0.0        255.0.0.0       8  7  IPv4     0
+      10/8                        u             10.0.0.0        255.0.0.0       8  7  IPv4     0
+      209.157.64/19               u             209.157.64.0    255.255.224.0   19 18 IPv4     0
+      209.157.64.0-209.157.95.255 u             209.157.64.0    255.255.224.0   19 18 IPv4     0
+      216.140.48.16/32            u             216.140.48.16   255.255.255.255 32 28 IPv4     0
+      209.157/17                  u             209.157.0.0     255.255.128.0   17 16 IPv4     0
+      default                     u             0.0.0.0         0.0.0.0         0  0  IPv4     0
+      209.157.68.22_0.0.31.255    u             209.157.64.0    255.255.224.0   19 18 IPv4     0
     );
-    push( @rtests, '209.157.68.22#0.0.31.255', 'u', '209.157.64.0', '255.255.224.0', '19', '18' );
 
     my @store = qw(
       209.157.64.0/19
@@ -70,19 +71,32 @@ MAIN: {
     my $debug = 0;
     my $x;
 
-    my ( $addr, $mask, $base, $newmask, $bits, $max );
-    while ( ( $addr, $mask, $base, $newmask, $bits, $max ) = splice( @rtests, 0, 6 ) ) {
+    my ( $addr, $mask, $base, $newmask, $bits, $max, $proto, $todo );
+    while ( ( $addr, $mask, $base, $newmask, $bits, $max, $proto, $todo ) =
+        splice( @rtests, 0, 8 ) )
+    {
 
-        print "# $addr $mask $base $newmask $bits $max\n";
+        $addr =~ s/_/#/g;
+
+        diag "$addr $mask $base $newmask $bits $max $proto $todo";
 
         $mask = undef if $mask eq 'u';
-        $x = Net::Netmask->new( $addr, $mask );
 
-        is( $x->base(),     $base,    "base of $addr" );
-        is( $x->mask(),     $newmask, "mask of $addr" );
-        is( $x->maxblock(), $max,     "maxblock of $addr" );
-        is( $x->bits(),     $bits,    "bits of $addr" );
-        is( $x->protocol(), 'IPv4',   "protocol of $addr" );
+        my $test = sub {
+            $x = Net::Netmask->new( $addr, $mask );
+
+            is( $x->base(),     $base,    "base of $addr" );
+            is( $x->mask(),     $newmask, "mask of $addr" );
+            is( $x->maxblock(), $max,     "maxblock of $addr" );
+            is( $x->bits(),     $bits,    "bits of $addr" );
+            is( $x->protocol(), $proto,   "protocol of $addr" );
+        };
+
+        if ($todo) {
+            todo 'marked as todo' => $test->();
+        } else {
+            $test->();
+        }
     }
 
     my @y;
@@ -160,14 +174,14 @@ MAIN: {
     $newmask = Net::Netmask->new("192.168.1.0/24");
     is( $newmask->broadcast(), "192.168.1.255" );
     is( $newmask->next(),      "192.168.2.0" );
-    ok( $newmask->match("192.168.1.0"), 'match 192.168.1.0' );
+    ok( $newmask->match("192.168.1.0"),   'match 192.168.1.0' );
     ok( $newmask->match("192.168.1.255"), 'match 192.168.1.255' );
-    ok( $newmask->match("192.168.1.63"), 'match 192.168.1.63' );
+    ok( $newmask->match("192.168.1.63"),  'match 192.168.1.63' );
 
     ok( !$newmask->match("192.168.0.255"), 'match 192.168.0.255' );
-    ok( !$newmask->match("192.168.2.0"), 'match 192.168.2.0' );
-    ok( !$newmask->match("10.168.2.0"), 'match 10.168.2.0' );
-    ok( !$newmask->match("209.168.2.0"), 'match 209.168.2.0' );
+    ok( !$newmask->match("192.168.2.0"),   'match 192.168.2.0' );
+    ok( !$newmask->match("10.168.2.0"),    'match 10.168.2.0' );
+    ok( !$newmask->match("209.168.2.0"),   'match 209.168.2.0' );
 
     is( $newmask->nth(1),  '192.168.1.1' );
     is( $newmask->nth(-1), '192.168.1.255' );
@@ -177,7 +191,7 @@ MAIN: {
     is( $newmask->nth(256),  undef );
     is( $newmask->nth(-257), undef );
 
-    ok( $newmask->match('192.168.1.1') == 1, 'match 192.168.1.1' );
+    ok( $newmask->match('192.168.1.1') == 1,     'match 192.168.1.1' );
     ok( $newmask->match('192.168.1.100') == 100, 'match 192.168.1.100' );
     ok( $newmask->match('192.168.1.255') == 255, 'match 192.168.1.255' );
 
@@ -248,7 +262,11 @@ MAIN: {
 
     (@c) = range2cidrlist( '216.240.32.128', '216.240.36.127' );
     $dl = dlist(@c);
-    is( $dl, '216.240.32.128/25 216.240.33.0/24 216.240.34.0/23 216.240.36.0/25', 'match cidrlist 3' );
+    is(
+        $dl,
+        '216.240.32.128/25 216.240.33.0/24 216.240.34.0/23 216.240.36.0/25',
+        'match cidrlist 3'
+    );
 
     my @d;
     @d = ( @c[ 0, 1, 3 ] );
@@ -468,8 +486,8 @@ MAIN: {
             -1 => '192.167.254.0/23',
         );
         while (@t) {
-            my $arg    = shift(@t);
-            my $result = shift(@t);
+            my $arg = shift(@t);
+            $result = shift(@t);
             is( $bl->nextblock($arg) . "", $result, "$result" );
         }
     }
@@ -479,7 +497,7 @@ MAIN: {
         my $obj2     = new2 Net::Netmask('1.0.0.4/32');
         my @leftover = cidrs2inverse( $obj1, $obj2 );
         # print "leftover = @leftover\n";
-        is( @leftover, 1 );
+        is( @leftover,      1 );
         is( "$leftover[0]", "1.0.0.5/32" );
     }
 
@@ -501,7 +519,7 @@ MAIN: {
         my $obj1     = new2 Net::Netmask('1.0.0.4/32');
         my $obj2     = new2 Net::Netmask('1.0.0.6/32');
         my @leftover = cidrs2inverse( $obj1, $obj2 );
-        is( @leftover, 1 );
+        is( @leftover,      1 );
         is( "$leftover[0]", '1.0.0.4/32' );
     }
 
@@ -509,7 +527,7 @@ MAIN: {
         my $obj1     = new2 Net::Netmask('1.0.0.4/31');
         my $obj2     = new2 Net::Netmask('1.0.0.5/32');
         my @leftover = cidrs2inverse( $obj1, $obj2 );
-        is( @leftover, 1 );
+        is( @leftover,      1 );
         is( "$leftover[0]", '1.0.0.4/32' );
     }
 
@@ -517,17 +535,17 @@ MAIN: {
         my $obj1     = new2 Net::Netmask('1.0.0.4/31');
         my $obj2     = new2 Net::Netmask('1.0.0.4/32');
         my @leftover = cidrs2inverse( $obj1, $obj2 );
-        is( @leftover, 1 );
+        is( @leftover,      1 );
         is( "$leftover[0]", '1.0.0.5/32' );
     }
 
     {
         my $obj1 = new2 Net::Netmask('217.173.192.0/21');
         my $obj2 = new2 Net::Netmask('217.173.200.0/21');
-        is( "$obj1", '217.173.192.0/21' );
-        is( "$obj2", '217.173.200.0/21' );
-        is( $obj1->contains($obj2), 0);
-        is( $obj2->contains($obj1), 0);
+        is( "$obj1",                '217.173.192.0/21' );
+        is( "$obj2",                '217.173.200.0/21' );
+        is( $obj1->contains($obj2), 0 );
+        is( $obj2->contains($obj1), 0 );
     }
 
     {
