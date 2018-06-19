@@ -1,6 +1,9 @@
 
 Revision history for Perl module Net::Netmask
 
+1.9104 ????-??-??
+ - Add Code of Conduct
+
 1.9103 2018-06-18
  - Use ASCII-like regex matching (Github #4)
  - Convert tests to Test2
