@@ -18,8 +18,8 @@ require Exporter;
   dumpNetworkTable sort_network_blocks cidrs2cidrs
   cidrs2inverse);
 @EXPORT_OK = (
-    @EXPORT, qw(int2quad quad2int %quadmask2bits
-      %quadhostmask2bits imask sameblock cmpblocks contains)
+    @EXPORT, qw(ascii2raw int2quad quad2int %quadmask2bits
+      %quadhostmask2bits imask raw2ascii sameblock cmpblocks contains)
 );
 
 my $remembered = {};
@@ -51,6 +51,7 @@ sub new {
     my $base;
     my $bits;
     my $ibase;
+    my $proto = 'IPv4';
     undef $error;
 
     if ( $net =~ m,^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)/([0-9]+)$, ) {
@@ -119,6 +120,15 @@ sub new {
           if !defined $error
           && ( !defined $bits
             || ( $ibase & ~$imask[$bits] ) );
+    } elsif ( $net =~ m,^([0-9a-f]*:[0-9a-f]*:[0-9a-f:]*)/([0-9]+)$, ) {
+        # IPv6 with netmask - ex: 2001:db8::/32
+        # TODO: Need to validate the base matches the bits
+        ( $base, $bits ) = ( $1, $2 );
+        $proto = 'IPv6';
+    } elsif ( $net =~ m,^([0-9a-f]*:[0-9a-f]*:[0-9a-f:]*)$, ) {
+        # IPv6 without netmask - ex: 2001:db8::1234
+        ( $base, $bits ) = ( $1, 128 );
+        $proto = 'IPv6';
     } else {
         $error = "could not parse $net";
         $error .= " $mask" if $mask;
@@ -133,7 +143,12 @@ sub new {
         $bits = 32;
     }
 
-    $ibase = quad2int( $base || 0 ) unless defined $ibase;
+    if ( $proto eq 'IPv4' ) {
+        $ibase = quad2int( $base || 0 ) unless defined $ibase;
+    } else {
+        # TODO: Switch to ascii2raw
+        $ibase = ascii2raw( ( $base || '::' ), $proto ) unless defined $ibase;
+    }
     unless ( defined($ibase) || defined($error) ) {
         $error = "could not parse $net";
         $error .= " $mask" if $mask;
@@ -144,7 +159,7 @@ sub new {
     return bless {
         'IBASE'    => $ibase,
         'BITS'     => $bits,
-        'PROTOCOL' => 'IPv4',
+        'PROTOCOL' => $proto,
         ( $error ? ( 'ERROR' => $error ) : () ),
     };
 }
@@ -159,9 +174,9 @@ sub new2 {
 sub errstr { return $error; }
 sub debug { my $this = shift; return ( @_ ? $debug = shift : $debug ) }
 
-sub base     { my ($this) = @_; return int2quad( $this->{'IBASE'} ); }
-sub bits     { my ($this) = @_; return $this->{'BITS'}; }
-sub size     { my ($this) = @_; return 2**( 32 - $this->{'BITS'} ); }
+sub base { my ($this) = @_; return raw2ascii( $this->{IBASE}, $this->{PROTOCOL} ); }
+sub bits { my ($this) = @_; return $this->{'BITS'}; }
+sub size { my ($this) = @_; return 2**( 32 - $this->{'BITS'} ); }
 sub protocol { my ($this) = @_; return $this->{'PROTOCOL'}; }
 
 sub next {    ## no critic: (Subroutines::ProhibitBuiltinHomonyms)
@@ -259,6 +274,110 @@ sub quad2int {
 
 sub int2quad {
     return join( '.', unpack( 'C4', pack( "N", $_[0] ) ) );
+}
+
+# Uses the internal "raw" representation (such as IBASE).
+# For IPv4, this is an integer
+# For IPv6, this is a raw bit string.
+sub raw2ascii {
+    if ( $_[1] eq 'IPv4' ) {
+        return join( '.', unpack( 'C4', pack( "N", $_[0] ) ) );
+    } elsif ( $_[1] eq 'IPv6' ) {
+        return ipv6Cannonical( join( ':', map { sprintf("%04x", $_) } unpack('n8', $_[0] ) ) );
+    } else {
+        confess("Incorrect call");
+    }
+}
+
+# Produces the internal "raw" representation (such as IBASE).
+# For IPv4, this is an integer
+# For IPv6, this is a raw bit string.
+sub ascii2raw {
+    if ( $_[1] eq 'IPv4' ) {
+        return int2quad($_[0]);
+    } elsif ( $_[1] eq 'IPv6' ) {
+        return ipv6ascii2raw( $_[0] );
+    } else {
+        confess("Incorrect call");
+    }
+}
+
+# Take an IPv6 ASCII address and produce a raw value
+sub ipv6ascii2raw {
+    my $addr = shift;
+
+    $addr = ipv6NonCompacted($addr);
+
+    my (@parts) = split /:/, $addr;
+    my $raw = pack('n*', map { hex($_) } @parts);
+
+    return $raw;
+}
+
+# Takes an IPv6 address and produces a standard version seperated by
+# colons (without compacting)
+sub ipv6NonCompacted {
+    my $addr = shift;
+
+    # Handle address format with trailing IPv6
+    # Ex: 0:0:0:0:1.2.3.4
+    if ( $addr =~ m/^[0-9a-f:]+[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/i ) {
+        my ($l, $r1, $r2, $r3, $r4) = $addr =~ m/^([0-9a-f:]+)([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)$/i;
+        $addr = sprintf("%s%02x%02x:%02x%02x", $l, $r1, $r2, $r3, $r4);
+    }
+
+    my ( $left, $right ) = split /::/, $addr;
+    if ( !defined($right) ) { $right = '' }
+    my (@lparts) = split /:/, $left;
+    my (@rparts) = split /:/, $right;
+
+    # Strip leading 0's & lowercase
+    @lparts = map { $_ =~ s/^0+([0-9a-f]+)/$1/; lc($_) } @lparts;
+    @rparts = map { $_ =~ s/^0+([0-9a-f]+)/$1/; lc($_) } @rparts;
+
+    # Expand ::
+    my $missing = 8 - ( @lparts + @rparts );
+    if ($missing) {
+        $addr = join ':', @lparts, ( 0, 0, 0, 0, 0, 0, 0, 0 )[ 0 .. $missing - 1 ], @rparts;
+    } else {
+        $addr = join ':', @lparts, @rparts;
+    }
+
+    return $addr;
+}
+
+# Compacts an IPv6 address (reduces successive :0: runs)
+sub ipv6AsciiCompact {
+    my $addr = shift;
+
+    # Compress, per RFC5952
+    if ( $addr =~ s/^0:0:0:0:0:0:0:0$/::/ ) {
+        return $addr;
+    } elsif ( $addr =~ s/(^|:)0:0:0:0:0:0:0(:|$)/::/n ) {
+        return $addr;
+    } elsif ( $addr =~ s/(^|:)0:0:0:0:0:0(:|$)/::/n ) {
+        return $addr;
+    } elsif ( $addr =~ s/(^|:)0:0:0:0:0(:|$)/::/n ) {
+        return $addr;
+    } elsif ( $addr =~ s/(^|:)0:0:0:0(:|$)/::/n ) {
+        return $addr;
+    } elsif ( $addr =~ s/(^|:)0:0:0(:|$)/::/n ) {
+        return $addr;
+    } elsif ( $addr =~ s/(^|:)0:0(:|$)/::/n ) {
+        return $addr;
+    } elsif ( $addr =~ s/(^|:)0(:|$)/::/n ) {
+        return $addr;
+    }
+    return $addr;
+}
+# Cannonicalize IPv6 addresses in ascii format
+sub ipv6Cannonical {
+    my $addr = shift;
+
+    $addr = ipv6NonCompacted($addr);
+    $addr = ipv6AsciiCompact($addr);
+
+    return $addr;
 }
 
 sub storeNetblock {
