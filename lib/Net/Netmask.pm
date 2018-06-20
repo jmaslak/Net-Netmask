@@ -5,6 +5,7 @@
 package Net::Netmask;
 
 use 5.006_001;
+use integer;
 
 # ABSTRACT: Understand and manipulate IP netmasks
 
@@ -590,10 +591,10 @@ sub split    ## no critic: (Subroutines::ProhibitBuiltinHomonyms)
     confess "Netmask only contains $num_ips IPs. Cannot split into $parts."
       unless $num_ips >= $parts;
 
-    my $log2 = log($parts) / log(2);
+    my $log2 = _log2($parts);
 
     confess "Parts count must be a number of base 2. Got: $parts"
-      unless floor($log2) == $log2;
+      unless (2**$log2) == $parts;
 
     my $new_mask = $self->bits + $log2;
 
