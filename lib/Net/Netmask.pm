@@ -353,19 +353,19 @@ sub ipv6AsciiCompact {
     # Compress, per RFC5952
     if ( $addr =~ s/^0:0:0:0:0:0:0:0$/::/ ) {
         return $addr;
-    } elsif ( $addr =~ s/(^|:)0:0:0:0:0:0:0(:|$)/::/n ) {
+    } elsif ( $addr =~ s/(:?^|:)0:0:0:0:0:0:0(:?:|$)/::/ ) {
         return $addr;
-    } elsif ( $addr =~ s/(^|:)0:0:0:0:0:0(:|$)/::/n ) {
+    } elsif ( $addr =~ s/(:?^|:)0:0:0:0:0:0(:?:|$)/::/ ) {
         return $addr;
-    } elsif ( $addr =~ s/(^|:)0:0:0:0:0(:|$)/::/n ) {
+    } elsif ( $addr =~ s/(:?^|:)0:0:0:0:0(:?:|$)/::/ ) {
         return $addr;
-    } elsif ( $addr =~ s/(^|:)0:0:0:0(:|$)/::/n ) {
+    } elsif ( $addr =~ s/(:?^|:)0:0:0:0(:?:|$)/::/ ) {
         return $addr;
-    } elsif ( $addr =~ s/(^|:)0:0:0(:|$)/::/n ) {
+    } elsif ( $addr =~ s/(:?^|:)0:0:0(:?:|$)/::/ ) {
         return $addr;
-    } elsif ( $addr =~ s/(^|:)0:0(:|$)/::/n ) {
+    } elsif ( $addr =~ s/(:?^|:)0:0(:?:|$)/::/ ) {
         return $addr;
-    } elsif ( $addr =~ s/(^|:)0(:|$)/::/n ) {
+    } elsif ( $addr =~ s/(:?^|:)0(:?:|$)/::/ ) {
         return $addr;
     }
     return $addr;
