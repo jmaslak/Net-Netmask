@@ -125,12 +125,12 @@ sub new {
     } elsif ( $net =~ m,^([0-9a-f]*:[0-9a-f]*:[0-9a-f:]*)/([0-9]+)$, ) {
         # IPv6 with netmask - ex: 2001:db8::/32
         # TODO: Need to validate the base matches the bits
-        ( $base, $bits ) = ( $1, $2 );
-        $proto = 'IPv6';
+        ( $base, $bits, $proto ) = ( $1, $2, 'IPv6' );
     } elsif ( $net =~ m,^([0-9a-f]*:[0-9a-f]*:[0-9a-f:]*)$, ) {
         # IPv6 without netmask - ex: 2001:db8::1234
-        ( $base, $bits ) = ( $1, 128 );
-        $proto = 'IPv6';
+        ( $base, $bits, $proto ) = ( $1, 128, 'IPv6' );
+    } elsif ( $net eq 'default6' || $net eq 'any6' ) {
+        ( $base, $bits, $proto ) = ( "::", 0, 'IPv6' );
     } else {
         $error = "could not parse $net";
         $error .= " $mask" if $mask;
@@ -149,11 +149,7 @@ sub new {
         $bits = 128;
     }
 
-    if ( $proto eq 'IPv4' ) {
-        $ibase = quad2int( $base || 0 ) unless defined $ibase;
-    } else {
-        $ibase = ascii2raw( ( $base || '::' ), $proto ) unless defined $ibase;
-    }
+    $ibase = ascii2raw( ( $base || '::' ), $proto ) unless defined $ibase;
     unless ( defined($ibase) || defined($error) ) {
         $error = "could not parse $net";
         $error .= " $mask" if $mask;
@@ -463,15 +459,15 @@ sub findNetblock {
     my ( $ascii, $t ) = @_;
     $t = $remembered unless $t;
 
-    my $proto = ($ascii =~ m/:/) ? 'IPv6' : 'IPv4';
+    my $proto = ( $ascii =~ m/:/ ) ? 'IPv6' : 'IPv4';
 
-    my $ip = ascii2raw($ascii, $proto);
+    my $ip = ascii2raw( $ascii, $proto );
     return unless defined $ip;
     my %done;
 
     my $maxbits = $proto eq 'IPv6' ? 128 : 32;
     for ( my $bits = $maxbits; $bits >= 0; $bits-- ) {
-        my $nb = inet_addr($ip, $bits, $proto);
+        my $nb = inet_addr( $ip, $bits, $proto );
         next unless exists $t->{$nb};
         my $mb = imaxblock( $nb, $maxbits, $proto );
         next if $done{$mb}++;
@@ -732,12 +728,11 @@ sub contains {
 }
 
 sub cmp_net_netmask_block {
-    if ( ($_[0]->{PROTOCOL} eq 'IPv4') && ($_[1]->{PROTOCOL} eq 'IPv4') ) {
+    if ( ( $_[0]->{PROTOCOL} eq 'IPv4' ) && ( $_[1]->{PROTOCOL} eq 'IPv4' ) ) {
         # IPv4
         return ( $_[0]->{IBASE} <=> $_[1]->{IBASE} || $_[0]->{BITS} <=> $_[1]->{BITS} );
-    } elsif ( ($_[0]->{PROTOCOL} eq 'IPv6') && ($_[1]->{PROTOCOL} eq 'IPv6') ) {
+    } elsif ( ( $_[0]->{PROTOCOL} eq 'IPv6' ) && ( $_[1]->{PROTOCOL} eq 'IPv6' ) ) {
         # IPv6
-        if (length($_[0]) != 16) { confess("Comparing IPv6 to IPv4 address") }
         return ( $_[0]->{IBASE} cmp $_[1]->{IBASE} || $_[0]->{BITS} <=> $_[1]->{BITS} );
     } else {
         return ( $_[0]->{PROTOCOL} cmp $_[1]->{PROTOCOL} );
