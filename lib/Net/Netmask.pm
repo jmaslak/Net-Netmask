@@ -460,20 +460,23 @@ sub deleteNetblock {
 }
 
 sub findNetblock {
-    my ( $ipquad, $t ) = @_;
+    my ( $ascii, $t ) = @_;
     $t = $remembered unless $t;
 
-    my $ip = quad2int($ipquad);
+    my $proto = ($ascii =~ m/:/) ? 'IPv6' : 'IPv4';
+
+    my $ip = ascii2raw($ascii, $proto);
     return unless defined $ip;
     my %done;
 
-    for ( my $bits = 32; $bits >= 0; $bits-- ) {
-        my $nb = $ip & $imask[$bits];
+    my $maxbits = $proto eq 'IPv6' ? 128 : 32;
+    for ( my $bits = $maxbits; $bits >= 0; $bits-- ) {
+        my $nb = inet_addr($ip, $bits, $proto);
         next unless exists $t->{$nb};
-        my $mb = imaxblock( $nb, 32 );    # XXX Add proto
+        my $mb = imaxblock( $nb, $maxbits, $proto );
         next if $done{$mb}++;
         my $i = $bits - $mb;
-        confess "$mb, $bits, $ipquad, $nb" if ( $i < 0 or $i > 32 );
+        confess "$mb, $bits, $ascii, $nb" if ( $i < 0 or $i > $maxbits );
         while ( $i >= 0 ) {
             return $t->{$nb}->[$i]
               if defined $t->{$nb}->[$i];
@@ -729,7 +732,16 @@ sub contains {
 }
 
 sub cmp_net_netmask_block {
-    return ( $_[0]->{IBASE} <=> $_[1]->{IBASE} || $_[0]->{BITS} <=> $_[1]->{BITS} );
+    if ( ($_[0]->{PROTOCOL} eq 'IPv4') && ($_[1]->{PROTOCOL} eq 'IPv4') ) {
+        # IPv4
+        return ( $_[0]->{IBASE} <=> $_[1]->{IBASE} || $_[0]->{BITS} <=> $_[1]->{BITS} );
+    } elsif ( ($_[0]->{PROTOCOL} eq 'IPv6') && ($_[1]->{PROTOCOL} eq 'IPv6') ) {
+        # IPv6
+        if (length($_[0]) != 16) { confess("Comparing IPv6 to IPv4 address") }
+        return ( $_[0]->{IBASE} cmp $_[1]->{IBASE} || $_[0]->{BITS} <=> $_[1]->{BITS} );
+    } else {
+        return ( $_[0]->{PROTOCOL} cmp $_[1]->{PROTOCOL} );
+    }
 }
 
 sub sort_network_blocks {
