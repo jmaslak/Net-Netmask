@@ -38,8 +38,11 @@ MAIN: {
       209.157/17                  u             209.157.0.0     255.255.128.0    17 16 IPv4     0
       default                     u             0.0.0.0         0.0.0.0          0  0  IPv4     0
       209.157.68.22_0.0.31.255    u             209.157.64.0    255.255.224.0    19 18 IPv4     0
-      2001:db8::/32               u             2001:db8::      ffff:ffff::      32 29 IPv6     0 
-      2001:db8:100::/48           u             2001:db8:100::  ffff:ffff:ffff:: 48 40 IPv6     0 
+      2001:db8::/32               u             2001:db8::      ffff:ffff::      32 29 IPv6     0
+      2001:db8:100::/48           u             2001:db8:100::  ffff:ffff:ffff:: 48 40 IPv6     0
+      2001:db8:100::              u             2001:db8:100::  ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff 128  40 IPv6  0
+      2001:db8:100::1             u             2001:db8:100::1 ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff 128 128 IPv6  0
+      ::                          u             ::              ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff 128   0 IPv6  0
     );
 
     my @store = qw(
@@ -87,9 +90,9 @@ MAIN: {
 
         my $test = sub {
             $x = Net::Netmask->new( $addr, $mask );
-            ok( $x, "parsed $addr ");
+            ok( $x, "parsed $addr " );
 
-            if (defined($x)) {
+            if ( defined($x) ) {
                 is( $x->base(),     $base,    "base of $addr" );
                 is( $x->mask(),     $newmask, "mask of $addr" );
                 is( $x->maxblock(), $max,     "maxblock of $addr" );
