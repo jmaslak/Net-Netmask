@@ -38,6 +38,7 @@ $debug = 1;
 use strict;
 use warnings;
 use Carp;
+use Math::BigInt try => 'GMP';
 use POSIX qw(floor);
 use overload
   '""'       => \&desc,
@@ -197,8 +198,17 @@ sub debug { my $this = shift; return ( @_ ? $debug = shift : $debug ) }
 
 sub base { my ($this) = @_; return raw2ascii( $this->{IBASE}, $this->{PROTOCOL} ); }
 sub bits { my ($this) = @_; return $this->{'BITS'}; }
-sub size { my ($this) = @_; return 2**( 32 - $this->{'BITS'} ); }
 sub protocol { my ($this) = @_; return $this->{'PROTOCOL'}; }
+
+sub size {
+    my ($this) = @_;
+
+    if ($this->{PROTOCOL} eq 'IPv4') {
+        return 2**( 32 - $this->{'BITS'} );
+    } else {
+        return Math::BigInt->new(2)->bpow(128 - $this->{'BITS'});
+    }
+}
 
 sub next {    ## no critic: (Subroutines::ProhibitBuiltinHomonyms)
     my ($this) = @_;
