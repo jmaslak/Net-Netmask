@@ -337,7 +337,7 @@ sub raw2ascii {
 # For IPv6, this is a raw bit string.
 sub ascii2raw {
     if ( $_[1] eq 'IPv4' ) {
-        return int2quad( $_[0] );
+        return quad2int( $_[0] );
     } elsif ( $_[1] eq 'IPv6' ) {
         return ipv6ascii2raw( $_[0] );
     } else {
