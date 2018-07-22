@@ -139,34 +139,33 @@ MAIN: {
 
     $x = Net::Netmask->new('any');
     ok( $x->size() == 4294967296, 'size of any netblock' );
-    
+
     $x = Net::Netmask->new('::/0');
-    is( $x->size(), '340282366920938463463374607431768211456', "size of ::/0");
+    is( $x->size(), '340282366920938463463374607431768211456', "size of ::/0" );
     @y = $x->inaddr();
     print "# REVERSE: @y\n";
     is( $y[0], 'ip6.arpa' );
 
     $x = Net::Netmask->new('2001:db8:100::3');
-    is( $x->size(), '1', "size of 2001:db8:100::3");
+    is( $x->size(), '1', "size of 2001:db8:100::3" );
     @y = $x->inaddr();
     print "# REVERSE: @y\n";
-    is( $y[0], '3.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1.0.8.b.d.0.1.0.0.2.ip6.arpa');
+    is( $y[0], '3.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1.0.8.b.d.0.1.0.0.2.ip6.arpa' );
 
     $x = Net::Netmask->new('2001:db8:100::/48');
-    is( $x->size(), '1208925819614629174706176', "size of 2001:db8:100::/48");
+    is( $x->size(), '1208925819614629174706176', "size of 2001:db8:100::/48" );
     @y = $x->inaddr();
     print "# REVERSE: @y\n";
-    is( $y[0], '0.0.1.0.8.b.d.0.1.0.0.2.ip6.arpa');
+    is( $y[0], '0.0.1.0.8.b.d.0.1.0.0.2.ip6.arpa' );
 
     $x = Net::Netmask->new('2001:db8:100::/49');
-    is( $x->size(), '604462909807314587353088', "size of 2001:db8:100::/48");
+    is( $x->size(), '604462909807314587353088', "size of 2001:db8:100::/48" );
     @y = $x->inaddr();
     print "# REVERSE: @y\n";
-    is( $y[0], '0.0.0.1.0.8.b.d.0.1.0.0.2.ip6.arpa');
-    is( $y[1], '1.0.0.1.0.8.b.d.0.1.0.0.2.ip6.arpa');
-    is( $y[7], '7.0.0.1.0.8.b.d.0.1.0.0.2.ip6.arpa');
-    ok( !defined( $y[8] ), '!defined $y[8]');
-
+    is( $y[0], '0.0.0.1.0.8.b.d.0.1.0.0.2.ip6.arpa' );
+    is( $y[1], '1.0.0.1.0.8.b.d.0.1.0.0.2.ip6.arpa' );
+    is( $y[7], '7.0.0.1.0.8.b.d.0.1.0.0.2.ip6.arpa' );
+    ok( !defined( $y[8] ), '!defined $y[8]' );
 
     $x = Net::Netmask->new('209.157.64.0/27');
     @y = $x->enumerate();
