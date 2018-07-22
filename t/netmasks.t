@@ -131,7 +131,6 @@ MAIN: {
     $x = Net::Netmask->new('140.174.82.4/32');
     is( $x->size(), 1, "size of 140.174.82.4/32" );
 
-    # perl bug: cannot just print this.
     is( ( $x->inaddr() )[0], '82.174.140.in-addr.arpa' );
 
     $x = Net::Netmask->new('140.174.82.64/27');
