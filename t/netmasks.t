@@ -145,18 +145,21 @@ MAIN: {
     @y = $x->inaddr();
     print "# REVERSE: @y\n";
     is( $y[0], 'ip6.arpa' );
+    ok( !defined( $y[1] ), '!defined $y[1]' );
 
     $x = Net::Netmask->new('2001:db8:100::3');
     is( $x->size(), '1', "size of 2001:db8:100::3" );
     @y = $x->inaddr();
     print "# REVERSE: @y\n";
     is( $y[0], '3.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1.0.8.b.d.0.1.0.0.2.ip6.arpa' );
+    ok( !defined( $y[1] ), '!defined $y[1]' );
 
     $x = Net::Netmask->new('2001:db8:100::/48');
     is( $x->size(), '1208925819614629174706176', "size of 2001:db8:100::/48" );
     @y = $x->inaddr();
     print "# REVERSE: @y\n";
     is( $y[0], '0.0.1.0.8.b.d.0.1.0.0.2.ip6.arpa' );
+    ok( !defined( $y[1] ), '!defined $y[1]' );
 
     $x = Net::Netmask->new('2001:db8:100::/49');
     is( $x->size(), '604462909807314587353088', "size of 2001:db8:100::/48" );
