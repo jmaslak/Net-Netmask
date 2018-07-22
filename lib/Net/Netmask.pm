@@ -38,7 +38,7 @@ $debug = 1;
 use strict;
 use warnings;
 use Carp;
-use Math::BigInt try => 'GMP';
+use Math::BigInt;
 use POSIX qw(floor);
 use overload
   '""'       => \&desc,
