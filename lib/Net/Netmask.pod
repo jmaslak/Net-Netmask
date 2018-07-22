@@ -240,9 +240,13 @@ get the last usable address, use B<nth>(-2).
 
 =item ->B<inaddr>()
 
-Returns an inline list of tuples.  There is a tuple for each
-DNS zone name in the block.  If the block is smaller than a /24,
-then the zone of the enclosing /24 is returned.
+Returns an inline list of tuples.
+
+For IPv4:
+
+There is a tuple for each DNS zone name (at the /24 level) in the block.
+If the block is smaller than a /24, then the zone of the enclosing /24
+is returned.
 
 Each tuple contains: the DNS zone name, the last component of
 the first IP address in the block in that zone, the last component
@@ -252,6 +256,16 @@ Examples: the list returned for the block '216.240.32.0/23' would
 be: '32.240.216.in-addr.arpa', 0, 255, '33.240.216.in-addr.arpa', 0, 255.
 The list returned for the block '216.240.32.64/27' would be:
 '32.240.216.in-addr.arpa', 64, 95.
+
+For IPv6:
+
+A list is returned with each DNS zone name at the shortest-prefix length
+possible.  This is not returned as a tuple, but just a list of strings.
+
+Examples: the list returned for the block '2002::/16' would be a one
+element list, containing just 2.0.0.2.ip6.arpa'.  The list
+for '2002::/17' would return a two element list
+containing '0.2.0.0.2.ip6.arpa' and '1.2.0.0.2.ip6.arpa'.
 
 =item ->B<nextblock>([$count])
 

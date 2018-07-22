@@ -289,6 +289,16 @@ sub enumerate {
 
 sub inaddr {
     my ($this) = @_;
+
+    if ($this->{PROTOCOL} eq 'IPv4') {
+        return $this->inaddr4();
+    } else {
+        return $this->inaddr6();
+    }
+}
+
+sub inaddr4 {
+    my ($this) = @_;
     my $ibase  = $this->{'IBASE'};
     my $blocks = floor( $this->size() / 256 );
     return (
@@ -302,6 +312,38 @@ sub inaddr {
             join( '.', unpack( 'xC3', pack( 'V', $ibase + $i * 256 ) ) ) . ".in-addr.arpa",
             0, 255 );
     }
+    return @ary;
+}
+
+sub inaddr6 {
+    my ($this) = @_;
+
+    my (@digits) = split //, sprintf("%08x%08x%08x%08x", unpack('NNNN', $this->{IBASE}));
+
+    my $static = floor($this->{BITS} / 4);
+    my $len    = floor(($static + 3) / 4);
+    my $remainder = $this->{BITS} % 4;
+    my $blocks = $remainder ? (2 ** ( 4 - $remainder ) ) : 1;
+
+    my @tail;
+    if (!$len) {
+        # Specal case: 0 len
+        return ( 'ip6.arpa' );
+    }
+    push @tail, reverse(@digits[0..($static-1)]), 'ip6.arpa' ;
+
+    if (!$remainder) {
+        # Special case - at nibble boundary already
+        return ( join '.', @tail );
+    }
+
+    my $last = hex $digits[$static];
+    my @ary;
+    for (my $i = 0; $i < $blocks; $i++) {
+        push @ary, join('.', sprintf("%x", $last), @tail);
+        $last++;
+    }
+
     return @ary;
 }
 
