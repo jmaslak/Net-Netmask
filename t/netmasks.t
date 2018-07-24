@@ -186,6 +186,16 @@ MAIN: {
     is( $y[8191], '10.2.31.255' );
     ok( !defined( $y[8192] ), '!defined($y[8192])' );
 
+    $x = Net::Netmask->new('2001:db8:100::/56');
+    @y = $x->enumerate(64);
+    is( $y[0],   '2001:db8:100::' );
+    is( $y[1],   '2001:db8:100:1::' );
+    is( $y[255], '2001:db8:100:ff::' );
+    ok( !defined( $y[256] ), '!defined($y[256])' );
+
+    $x = Net::Netmask->new('::/0');
+    ok( dies( sub { @y = $x->enumerate() } ), "Dies on large enumeration" );
+
     my $table  = {};
     my $table9 = {};
 
@@ -245,6 +255,32 @@ MAIN: {
     ok( !( $newmask->match('192.168.2.1') ), 'match 192.168.2.1' );
     ok( ( ( 0 + $newmask->match('192.168.1.0') ) == 0 ), '0 + match 192.168.1.0' );
     ok( ( $newmask->match('192.168.1.0') ), 'match 192.168.1.0' );
+
+    $newmask = Net::Netmask->new("2001:db8:100::/48");
+    is( $newmask->broadcast(), undef,            "No broadcast in IPv6" );
+    is( $newmask->next(),      "2001:db8:101::", "next of 2001:db8:100::/48" );
+    ok( $newmask->match('2001:db8:100::'), 'match 2001:db8:100::' );
+    ok(
+        $newmask->match('2001:db8:100:ffff:ffff:ffff:ffff:ffff'),
+        'match 2001:db8:100:ffff:ffff:ffff:ffff:ffff'
+    );
+    ok( $newmask->match('2001:db8:100::2'), 'match 2001:db8:100::2' );
+
+    ok(
+        !$newmask->match('2001:db8:99:ffff:ffff:ffff:ffff:ffff'),
+        'match 2001:db8:99:ffff:ffff:ffff:ffff:ffff'
+    );
+    ok( !$newmask->match('2001:db8:101::'), 'match 2001:db8:101::' );
+    ok(
+        !$newmask->match('1:db8:100:ffff:ffff:ffff:ffff:ffff'),
+        'match 1:db8:100:ffff:ffff:ffff:ffff:ffff'
+    );
+    ok(
+        !$newmask->match('4000:db8:100:ffff:ffff:ffff:ffff:ffff'),
+        'match 4000:db8:100:ffff:ffff:ffff:ffff:ffff'
+    );
+
+    ok( 0 + $newmask->match('2001:db8:100::') == 0, '0 + match 2001:db8:100::' );
 
     my $bks;
     my $block = Net::Netmask->new('209.157.64.1/32');

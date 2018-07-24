@@ -156,7 +156,7 @@ sub new {
         $error .= " $mask" if $mask;
     }
 
-    $ibase = inet_addr( $ibase, $bits, $proto );    # TODO Name inet_addr better
+    $ibase = i_getnet_addr( $ibase, $bits, $proto );    # TODO Name i_getnet_addr better
 
     return bless {
         'IBASE'    => $ibase,
@@ -166,7 +166,7 @@ sub new {
     };
 }
 
-sub inet_addr {
+sub i_getnet_addr {
     my ( $ibase, $bits, $proto ) = @_;
 
     if ( !defined($ibase) ) { return; }
@@ -212,11 +212,18 @@ sub size {
 
 sub next {    ## no critic: (Subroutines::ProhibitBuiltinHomonyms)
     my ($this) = @_;
-    return int2quad( $this->{'IBASE'} + $this->size() );
+    if ( $this->{PROTOCOL} eq 'IPv4' ) {
+        return int2quad( $this->{'IBASE'} + $this->size() );
+    } else {
+        return $this->_ipv6next( $this->size() );
+    }
 }
 
 sub broadcast {
     my ($this) = @_;
+
+    if ( $this->{PROTOCOL} eq 'IPv6' ) { return; }    # No broadcast in IPv6
+
     return int2quad( $this->{'IBASE'} + $this->size() - 1 );
 }
 
@@ -276,15 +283,59 @@ sub nth {
 
 sub enumerate {
     my ( $this, $bitstep ) = @_;
-    $bitstep = 32 unless $bitstep;
-    my $size      = $this->size();
-    my $increment = 2**( 32 - $bitstep );
+    my $proto = $this->{PROTOCOL};
+
+    # Set default step size by protocol
+    $bitstep = ( $proto eq 'IPv4' ? 32 : 128 ) unless $bitstep;
+
+    my $size = $this->size();
+
     my @ary;
-    my $ibase = $this->{'IBASE'};
-    for ( my $i = 0; $i < $size; $i += $increment ) {
-        push( @ary, int2quad( $ibase + $i ) );
+    if ( $proto eq 'IPv4' ) {
+        my $increment = 2**( 32 - $bitstep );
+        my $ibase     = $this->{'IBASE'};
+        for ( my $i = 0; $i < $size; $i += $increment ) {
+            push( @ary, int2quad( $ibase + $i ) );
+        }
+    } else {
+        my $increment = Math::BigInt->new(2)->bpow( 128 - $bitstep );
+
+        if ( ( $size / $increment ) > 1_000_000_000 ) {
+            # Let's help the user out and catch really obvious issues.
+            # Asking for a billion IP addresses is probably one of them.
+            #
+            # That said, please contact the author if this number causes
+            # you issues!
+            confess("More than 1,000,000,000 results would be returned, dieing");
+        }
+
+        for ( my $i = Math::BigInt->new(0); $i < $size; $i += $increment ) {
+            push( @ary, $this->_ipv6next($i) );
+        }
     }
     return @ary;
+}
+
+sub _ipv6next {
+    my ( $this, $bitstep ) = @_;
+
+    my $raw = $this->{IBASE};
+    my $start = join( '', map { sprintf( "%04x", $_ ) } unpack( 'n8', $raw ) );
+
+    my $istart = Math::BigInt->from_hex($start);
+
+    my $val = $istart + $bitstep;
+
+    my $hex = $val->to_hex();
+
+    if ( length($hex) < 32 ) {
+        $hex = ( '0' x 32 - length($hex) ) . $hex;
+    }
+
+    my $ipaddr = $hex;
+    $ipaddr =~ s/(....)(?=....)/$1:/gsx;
+
+    return ipv6Cannonical($ipaddr);
 }
 
 sub inaddr {
@@ -519,7 +570,7 @@ sub findNetblock {
 
     my $maxbits = $proto eq 'IPv6' ? 128 : 32;
     for ( my $bits = $maxbits; $bits >= 0; $bits-- ) {
-        my $nb = inet_addr( $ip, $bits, $proto );
+        my $nb = i_getnet_addr( $ip, $bits, $proto );
         next unless exists $t->{$nb};
         my $mb = imaxblock( $nb, $maxbits, $proto );
         next if $done{$mb}++;
@@ -619,12 +670,37 @@ sub checkNetblock {
 
 sub match {
     my ( $this, $ip ) = @_;
-    my $i     = quad2int($ip);
-    my $imask = $imask[ $this->{BITS} ];
-    if ( ( $i & $imask ) == $this->{IBASE} ) {
-        return ( ( $i & ~$imask ) || "0 " );
+    my $proto = $this->{PROTOCOL};
+    my $maxbits = $proto eq 'IPv6' ? 128 : 32;
+
+    # Two different protocols: return undef
+    if ( $ip =~ /:/ ) {
+        if ( $proto ne 'IPv6' ) { return }
     } else {
-        return 0;
+        if ( $proto ne 'IPv4' ) { return }
+    }
+
+    my $i = ascii2raw( $ip, $this->{PROTOCOL} );
+    my $ia = i_getnet_addr( $i, $this->{BITS}, $proto );
+
+    if ( $proto eq 'IPv4' ) {
+        if ( $ia == $this->{IBASE} ) {
+            return ( ( $i & ~( $this->{IBASE} ) ) || "0 " );
+        } else {
+            return 0;
+        }
+    } else {
+        if ( $ia eq $this->{IBASE} ) {
+            my $base = join( '', map { sprintf( "%04x", $_ ) } unpack( 'n8', $this->{IBASE} ) );
+            my $ibase = Math::BigInt->from_hex($base);
+
+            my $addr = join( '', map { sprintf( "%04x", $_ ) } unpack( 'n8', $ia ) );
+            my $iaddr = Math::BigInt->from_hex($addr);
+
+            return ( ( $iaddr - $ibase ) || "0 " );
+        } else {
+            return 0;
+        }
     }
 }
 
@@ -655,7 +731,7 @@ sub imaxblock {
     if ( !defined($proto) ) { $proto = 'IPv4'; }
 
     while ( $tbit > 0 ) {
-        my $ia = inet_addr( $ibase, $tbit - 1, $proto );
+        my $ia = i_getnet_addr( $ibase, $tbit - 1, $proto );
         last if ( $ia ne $ibase );
         $tbit--;
     }
