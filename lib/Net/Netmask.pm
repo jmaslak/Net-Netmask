@@ -671,7 +671,6 @@ sub checkNetblock {
 sub match {
     my ( $this, $ip ) = @_;
     my $proto = $this->{PROTOCOL};
-    my $maxbits = $proto eq 'IPv6' ? 128 : 32;
 
     # Two different protocols: return undef
     if ( $ip =~ /:/ ) {
