@@ -19,8 +19,8 @@ require Exporter;
   dumpNetworkTable sort_network_blocks cidrs2cidrs
   cidrs2inverse);
 @EXPORT_OK = (
-    @EXPORT, qw(ascii2raw int2quad quad2int %quadmask2bits
-      %quadhostmask2bits imask i6mask raw2ascii sameblock cmpblocks contains)
+    @EXPORT, qw(ascii2int int2quad quad2int %quadmask2bits
+      %quadhostmask2bits imask i6mask int2ascii sameblock cmpblocks contains)
 );
 
 my $remembered = {};
@@ -150,13 +150,13 @@ sub new {
         $bits = 128;
     }
 
-    $ibase = ascii2raw( ( $base || '::' ), $proto ) unless defined $ibase;
+    $ibase = ascii2int( ( $base || '::' ), $proto ) unless defined $ibase;
     unless ( defined($ibase) || defined($error) ) {
         $error = "could not parse $net";
         $error .= " $mask" if $mask;
     }
 
-    $ibase = i_getnet_addr( $ibase, $bits, $proto );    # TODO Name i_getnet_addr better
+    $ibase = i_getnet_addr( $ibase, $bits, $proto );
 
     return bless {
         'IBASE'    => $ibase,
@@ -172,18 +172,10 @@ sub i_getnet_addr {
     if ( !defined($ibase) ) { return; }
 
     if ( $proto eq 'IPv4' ) {
-        $ibase &= $imask[$bits] if defined $ibase;
+        return $ibase & $imask[$bits];
     } else {
-        my (@basepart) = unpack( 'NNNN', $ibase );
-        my (@maskpart) = unpack( 'NNNN', $i6mask[$bits] );
-
-        $ibase = '';
-        for ( my $i = 0; $i < 4; $i++ ) {
-            $ibase .= pack( 'N', ( $basepart[$i] & $maskpart[$i] ) );
-        }
+        return $ibase & $i6mask[$bits];
     }
-
-    return $ibase;
 }
 
 sub new2 {
@@ -196,7 +188,7 @@ sub new2 {
 sub errstr { return $error; }
 sub debug { my $this = shift; return ( @_ ? $debug = shift : $debug ) }
 
-sub base { my ($this) = @_; return raw2ascii( $this->{IBASE}, $this->{PROTOCOL} ); }
+sub base { my ($this) = @_; return int2ascii( $this->{IBASE}, $this->{PROTOCOL} ); }
 sub bits { my ($this) = @_; return $this->{'BITS'}; }
 sub protocol { my ($this) = @_; return $this->{'PROTOCOL'}; }
 
@@ -212,6 +204,7 @@ sub size {
 
 sub next {    ## no critic: (Subroutines::ProhibitBuiltinHomonyms)
     my ($this) = @_;
+    # TODO: CONSOLIDATE
     if ( $this->{PROTOCOL} eq 'IPv4' ) {
         return int2quad( $this->{'IBASE'} + $this->size() );
     } else {
@@ -231,7 +224,7 @@ sub broadcast {
 *last  = \&broadcast;
 
 sub desc {
-    return raw2ascii( $_[0]->{IBASE}, $_[0]->{PROTOCOL} ) . '/' . $_[0]->{BITS};
+    return int2ascii( $_[0]->{IBASE}, $_[0]->{PROTOCOL} ) . '/' . $_[0]->{BITS};
 }
 
 sub imask {
@@ -242,14 +235,7 @@ sub i6mask {
     my $bits = shift;
     # We break into 4 32 bit chunks
 
-    my $out = '';
-    for ( my $i = 0; $i < 4; $i++ ) {
-        my $b = $bits <= 32 ? $bits : 32;
-        $out .= pack( 'N', imask($b) );
-
-        $bits = $bits > 32 ? $bits - 32 : 0;
-    }
-    return $out;
+    return Math::BigInt->new(2)->bpow(128) - Math::BigInt->new(2)->bpow( 128 - $bits );
 }
 
 sub mask {
@@ -258,7 +244,7 @@ sub mask {
     if ( $this->{PROTOCOL} eq 'IPv4' ) {
         return int2quad( $imask[ $this->{'BITS'} ] );
     } else {
-        return raw2ascii( $i6mask[ $this->{'BITS'} ], $this->{PROTOCOL} );
+        return int2ascii( $i6mask[ $this->{'BITS'} ], $this->{PROTOCOL} );
     }
 }
 
@@ -291,6 +277,7 @@ sub enumerate {
     my $size = $this->size();
 
     my @ary;
+    ### We should be able to consolidate this
     if ( $proto eq 'IPv4' ) {
         my $increment = 2**( 32 - $bitstep );
         my $ibase     = $this->{'IBASE'};
@@ -319,10 +306,7 @@ sub enumerate {
 sub _ipv6next {
     my ( $this, $bitstep ) = @_;
 
-    my $raw = $this->{IBASE};
-    my $start = join( '', map { sprintf( "%04x", $_ ) } unpack( 'n8', $raw ) );
-
-    my $istart = Math::BigInt->from_hex($start);
+    my $istart = $this->{IBASE};
 
     my $val = $istart + $bitstep;
 
@@ -369,7 +353,7 @@ sub inaddr4 {
 sub inaddr6 {
     my ($this) = @_;
 
-    my (@digits) = split //, sprintf( "%08x%08x%08x%08x", unpack( 'NNNN', $this->{IBASE} ) );
+    my (@digits) = split //, $this->{IBASE}->to_hex;
 
     my $static    = floor( $this->{BITS} / 4 );
     my $len       = floor( ( $static + 3 ) / 4 );
@@ -421,11 +405,12 @@ sub int2quad {
 # Uses the internal "raw" representation (such as IBASE).
 # For IPv4, this is an integer
 # For IPv6, this is a raw bit string.
-sub raw2ascii {
+sub int2ascii {
     if ( $_[1] eq 'IPv4' ) {
         return join( '.', unpack( 'C4', pack( "N", $_[0] ) ) );
     } elsif ( $_[1] eq 'IPv6' ) {
-        return ipv6Cannonical( join( ':', map { sprintf( "%04x", $_ ) } unpack( 'n8', $_[0] ) ) );
+        my $addr = ( ref $_[0] ) ne '' ? $_[0]->to_hex : Math::BigInt->new( $_[0] )->to_hex;
+        return ipv6Cannonical($addr);
     } else {
         confess("Incorrect call");
     }
@@ -434,32 +419,37 @@ sub raw2ascii {
 # Produces the internal "raw" representation (such as IBASE).
 # For IPv4, this is an integer
 # For IPv6, this is a raw bit string.
-sub ascii2raw {
+sub ascii2int {
     if ( $_[1] eq 'IPv4' ) {
         return quad2int( $_[0] );
     } elsif ( $_[1] eq 'IPv6' ) {
-        return ipv6ascii2raw( $_[0] );
+        return ipv6ascii2int( $_[0] );
     } else {
         confess("Incorrect call");
     }
 }
 
 # Take an IPv6 ASCII address and produce a raw value
-sub ipv6ascii2raw {
+sub ipv6ascii2int {
     my $addr = shift;
 
     $addr = ipv6NonCompacted($addr);
+    $addr = join '', map { sprintf( "%04x", hex($_) ) } split( /:/, $addr );
 
-    my (@parts) = split /:/, $addr;
-    my $raw = pack( 'n*', map { hex($_) } @parts );
-
-    return $raw;
+    return Math::BigInt->from_hex($addr);
 }
 
 # Takes an IPv6 address and produces a standard version seperated by
 # colons (without compacting)
 sub ipv6NonCompacted {
     my $addr = shift;
+
+    if ( $addr !~ /:/ ) {
+        if ( length($addr) < 32 ) {
+            $addr = ( "0" x ( 32 - length($addr) ) ) . $addr;
+        }
+        $addr =~ s/(....)(?=....)/$1:/gsx;
+    }
 
     # Handle address format with trailing IPv6
     # Ex: 0:0:0:0:1.2.3.4
@@ -523,11 +513,15 @@ sub ipv6Cannonical {
     return $addr;
 }
 
+# IPv6 addresses are stored with a leading zero.
 sub storeNetblock {
     my ( $this, $t ) = @_;
     $t = $remembered unless $t;
 
     my $base = $this->{'IBASE'};
+    if ( $this->{PROTOCOL} eq 'IPv6' ) {
+        $base = "0$base";
+    }
 
     $t->{$base} = [] unless exists $t->{$base};
 
@@ -535,7 +529,7 @@ sub storeNetblock {
     my $bits = $this->{'BITS'};
     my $i    = $bits - $mb;
 
-    return ( $t->{$base}->[$i] = $this );
+    return ( $t->{$base}[$i] = $this );
 }
 
 sub deleteNetblock {
@@ -543,6 +537,9 @@ sub deleteNetblock {
     $t = $remembered unless $t;
 
     my $base = $this->{'IBASE'};
+    if ( $this->{PROTOCOL} eq 'IPv6' ) {
+        $base = "0$base";
+    }
 
     my $mb   = maxblock($this);
     my $bits = $this->{'BITS'};
@@ -564,18 +561,20 @@ sub findNetblock {
 
     my $proto = ( $ascii =~ m/:/ ) ? 'IPv6' : 'IPv4';
 
-    my $ip = ascii2raw( $ascii, $proto );
+    my $ip = ascii2int( $ascii, $proto );
     return unless defined $ip;
     my %done;
 
     my $maxbits = $proto eq 'IPv6' ? 128 : 32;
     for ( my $bits = $maxbits; $bits >= 0; $bits-- ) {
         my $nb = i_getnet_addr( $ip, $bits, $proto );
+        if ( $proto eq 'IPv6' ) {
+            $nb = "0$nb";
+        }
         next unless exists $t->{$nb};
         my $mb = imaxblock( $nb, $maxbits, $proto );
         next if $done{$mb}++;
         my $i = $bits - $mb;
-        confess "$mb, $bits, $ascii, $nb" if ( $i < 0 or $i > $maxbits );
         while ( $i >= 0 ) {
             return $t->{$nb}->[$i]
               if defined $t->{$nb}->[$i];
@@ -589,6 +588,8 @@ sub findOuterNetblock {
     my ( $ipquad, $t ) = @_;
     $t = $remembered unless $t;
 
+    my $proto = 'IPv4';
+
     my $ip;
     my $mask;
     if ( ref($ipquad) ) {
@@ -601,6 +602,9 @@ sub findOuterNetblock {
 
     for ( my $bits = 0; $bits <= $mask; $bits++ ) {
         my $nb = $ip & $imask[$bits];
+        if ( $proto eq 'IPv6' ) {
+            $nb = "0$nb";
+        }
         next unless exists $t->{$nb};
         my $mb = imaxblock( $nb, $mask );    # XXX Add proto
         my $i = $bits - $mb;
@@ -622,8 +626,13 @@ sub findAllNetblock {
     my $ip = quad2int($ipquad);
     my %done;
 
+    my $proto = 'IPv4';
+
     for ( my $bits = 32; $bits >= 0; $bits-- ) {
         my $nb = $ip & $imask[$bits];
+        if ( $proto eq 'IPv6' ) {
+            $nb = "0$nb";
+        }
         next unless exists $t->{$nb};
         my $mb = imaxblock( $nb, 32 );    # XXX Add Proto
         next if $done{$mb}++;
@@ -679,7 +688,7 @@ sub match {
         if ( $proto ne 'IPv4' ) { return }
     }
 
-    my $i = ascii2raw( $ip, $this->{PROTOCOL} );
+    my $i = ascii2int( $ip, $this->{PROTOCOL} );
     my $ia = i_getnet_addr( $i, $this->{BITS}, $proto );
 
     if ( $proto eq 'IPv4' ) {
@@ -731,7 +740,7 @@ sub imaxblock {
 
     while ( $tbit > 0 ) {
         my $ia = i_getnet_addr( $ibase, $tbit - 1, $proto );
-        last if ( $ia ne $ibase );
+        last if ( $ia != $ibase );
         $tbit--;
     }
     return $tbit;
@@ -860,17 +869,17 @@ sub cmp_net_netmask_block {
         return ( $_[0]->{IBASE} <=> $_[1]->{IBASE} || $_[0]->{BITS} <=> $_[1]->{BITS} );
     } elsif ( ( $_[0]->{PROTOCOL} eq 'IPv6' ) && ( $_[1]->{PROTOCOL} eq 'IPv6' ) ) {
         # IPv6
-        return ( $_[0]->{IBASE} cmp $_[1]->{IBASE} || $_[0]->{BITS} <=> $_[1]->{BITS} );
+        return ( $_[0]->{IBASE} <=> $_[1]->{IBASE} || $_[0]->{BITS} <=> $_[1]->{BITS} );
     } else {
+        # IPv4 to IPv6, order by protocol
         return ( $_[0]->{PROTOCOL} cmp $_[1]->{PROTOCOL} );
     }
 }
 
 sub sort_network_blocks {
     return map { $_->[0] }
-      sort { $a->[1] <=> $b->[1] || $a->[2] <=> $b->[2] }
-      map { [ $_, $_->{IBASE}, $_->{BITS} ] } @_;
-
+      sort { $a->[3] cmp $b->[3] || $a->[1] <=> $b->[1] || $a->[2] <=> $b->[2] }
+      map { [ $_, $_->{IBASE}, $_->{BITS}, $_->{PROTOCOL} ] } @_;
 }
 
 sub sort_by_ip_address {
