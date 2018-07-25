@@ -256,15 +256,24 @@ sub hostmask {
 
 sub nth {
     my ( $this, $index, $bitstep ) = @_;
+
+    my $maxbits = $this->{PROTOCOL} eq 'IPv4' ? 32 : 128;
+
+    warn $index;
     my $size  = $this->size();
     my $ibase = $this->{'IBASE'};
-    $bitstep = 32 unless $bitstep;
-    my $increment = 2**( 32 - $bitstep );
+    $bitstep = $maxbits unless $bitstep;
+    my $increment = 2**( $maxbits - $bitstep );
     $index *= $increment;
     $index += $size if $index < 0;
     return if $index < 0;
     return if $index >= $size;
-    return int2quad( $ibase + $index );
+
+    my $i = $ibase + $index;
+    if ( $this->{PROTOCOL} eq 'IPv6' ) {
+        my $max = Math::BigInt->new(2)->bpow(128);
+    }
+    return int2ascii( $i, $this->{PROTOCOL} );
 }
 
 sub enumerate {

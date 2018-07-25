@@ -282,6 +282,14 @@ MAIN: {
 
     ok( 0 + $newmask->match('2001:db8:100::') == 0, '0 + match 2001:db8:100::' );
 
+    is( $newmask->nth(1), '2001:db8:100::1', 'IPv6 nth 1' );
+    is( $newmask->nth(-1), '2001:db8:100:ffff:ffff:ffff:ffff:ffff', 'IPv6 nth -1' );
+
+    $newmask = Net::Netmask->new('::/128');
+    is( $newmask->nth(1),  undef, 'IPv6 nth 1 (2)' );
+    is( $newmask->nth(-1), '::',  'IPv6 nth -1 (2)' );
+    is( $newmask->nth(-2), undef, 'IPv6 nth -2 (2)' );
+
     my $bks;
     my $block = Net::Netmask->new('209.157.64.1/32');
     $block->storeNetblock($bks);
