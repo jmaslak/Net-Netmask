@@ -247,9 +247,9 @@ MAIN: {
     is( $newmask->nth(256),  undef );
     is( $newmask->nth(-257), undef );
 
-    ok( $newmask->match('192.168.1.1') == 1,     'match 192.168.1.1' );
-    ok( $newmask->match('192.168.1.100') == 100, 'match 192.168.1.100' );
-    ok( $newmask->match('192.168.1.255') == 255, 'match 192.168.1.255' );
+    is( $newmask->match('192.168.1.1'),   1,   'match 192.168.1.1' );
+    is( $newmask->match('192.168.1.100'), 100, 'match 192.168.1.100' );
+    is( $newmask->match('192.168.1.255'), 255, 'match 192.168.1.255' );
 
     ok( ( $newmask->match('192.168.2.1') == 0 ), 'match 192.168.2.1' );
     ok( !( $newmask->match('192.168.2.1') ), 'match 192.168.2.1' );
@@ -265,6 +265,9 @@ MAIN: {
         'match 2001:db8:100:ffff:ffff:ffff:ffff:ffff'
     );
     ok( $newmask->match('2001:db8:100::2'), 'match 2001:db8:100::2' );
+
+    is( int( $newmask->match('2001:db8:100::') ), 0, 'match 2001:db8:100:: 2' );
+    is( $newmask->match('2001:db8:100::2'),       2, 'match 2001:db8:100::2 2' );
 
     ok(
         !$newmask->match('2001:db8:99:ffff:ffff:ffff:ffff:ffff'),

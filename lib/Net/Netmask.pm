@@ -259,7 +259,6 @@ sub nth {
 
     my $maxbits = $this->{PROTOCOL} eq 'IPv4' ? 32 : 128;
 
-    warn $index;
     my $size  = $this->size();
     my $ibase = $this->{'IBASE'};
     $bitstep = $maxbits unless $bitstep;
@@ -707,14 +706,8 @@ sub match {
             return 0;
         }
     } else {
-        if ( $ia eq $this->{IBASE} ) {
-            my $base = join( '', map { sprintf( "%04x", $_ ) } unpack( 'n8', $this->{IBASE} ) );
-            my $ibase = Math::BigInt->from_hex($base);
-
-            my $addr = join( '', map { sprintf( "%04x", $_ ) } unpack( 'n8', $ia ) );
-            my $iaddr = Math::BigInt->from_hex($addr);
-
-            return ( ( $iaddr - $ibase ) || "0 " );
+        if ( $ia == $this->{IBASE} ) {
+            return ( ( $i - $this->{IBASE} ) || "0 " );
         } else {
             return 0;
         }
