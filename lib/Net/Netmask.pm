@@ -215,9 +215,7 @@ sub next {    ## no critic: (Subroutines::ProhibitBuiltinHomonyms)
 sub broadcast {
     my ($this) = @_;
 
-    if ( $this->{PROTOCOL} eq 'IPv6' ) { return; }    # No broadcast in IPv6
-
-    return int2quad( $this->{'IBASE'} + $this->size() - 1 );
+    return int2ascii( $this->{'IBASE'} + $this->size() - 1, $this->{PROTOCOL} );
 }
 
 *first = \&base;

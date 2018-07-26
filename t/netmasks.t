@@ -257,8 +257,8 @@ MAIN: {
     ok( ( $newmask->match('192.168.1.0') ), 'match 192.168.1.0' );
 
     $newmask = Net::Netmask->new("2001:db8:100::/48");
-    is( $newmask->broadcast(), undef,            "No broadcast in IPv6" );
-    is( $newmask->next(),      "2001:db8:101::", "next of 2001:db8:100::/48" );
+    is( $newmask->broadcast(), "2001:db8:100:ffff:ffff:ffff:ffff:ffff", "Broadcast for IPv6" );
+    is( $newmask->next(), "2001:db8:101::", "next of 2001:db8:100::/48" );
     ok( $newmask->match('2001:db8:100::'), 'match 2001:db8:100::' );
     ok(
         $newmask->match('2001:db8:100:ffff:ffff:ffff:ffff:ffff'),
