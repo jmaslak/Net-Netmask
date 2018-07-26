@@ -749,30 +749,51 @@ sub imaxblock {
 sub range2cidrlist {
     my ( $startip, $endip ) = @_;
 
-    my $start = quad2int($startip);
-    my $end   = quad2int($endip);
+    my $proto;
+    if ( $startip =~ m/:/ ) {
+        if ( $endip =~ m/:/ ) { $proto = 'IPv6'; }
+    } else {
+        if ( $endip !~ m/:/ ) { $proto = 'IPv4'; }
+    }
+    if ( !defined($proto) ) { confess("Cannot mix IPv4 and IPv6 in range2cidrlist()"); }
+
+    my $start = ascii2int( $startip, $proto );
+    my $end   = ascii2int( $endip,   $proto );
 
     ( $start, $end ) = ( $end, $start )
       if $start > $end;
-    return irange2cidrlist( $start, $end );
+    return irange2cidrlist( $start, $end, $proto );
 }
 
 sub irange2cidrlist {
-    my ( $start, $end ) = @_;
+    my ( $start, $end, $proto ) = @_;
+    if ( !defined($proto) ) { $proto = 'IPv4' }
+
+    my $bits = $proto eq 'IPv4' ? 32 : 128;
+
     my @result;
     while ( $end >= $start ) {
-        my $maxsize = imaxblock( $start, 32 );           # XXX Add proto
-        my $maxdiff = 32 - _log2( $end - $start + 1 );
+        my $maxsize = imaxblock( $start, $bits, $proto );
+        my $maxdiff;
+        if ( $proto eq 'IPv4' ) {
+            $maxdiff = $bits - _log2( $end - $start + 1 );
+        } else {
+            $maxdiff = $bits - ( $end - $start + 1 )->blog(2);
+        }
         $maxsize = $maxdiff if $maxsize < $maxdiff;
         push(
             @result,
             bless {
                 'IBASE'    => $start,
                 'BITS'     => $maxsize,
-                'PROTOCOL' => 'IPv4',
+                'PROTOCOL' => $proto,
             }
         );
-        $start += 2**( 32 - $maxsize );
+        if ( $proto eq 'IPv4' ) {
+            $start += 2**( 32 - $maxsize );
+        } else {
+            $start += Math::BigInt->new(2)->bpow( $bits - $maxsize );
+        }
     }
     return @result;
 }
@@ -806,7 +827,7 @@ sub cidrs2cidrs {
         }
         my $start = $r[0]->{IBASE};
         my $end   = $max - 1;
-        push( @result, irange2cidrlist( $start, $end ) );
+        push( @result, irange2cidrlist( $start, $end ) );    # XXX Add proto
     }
     return @result;
 }
@@ -823,16 +844,16 @@ sub cidrs2inverse {
 
         if ( $first < $cidrs[0]->{IBASE} ) {
             if ( $last <= $cidrs[0]->{IBASE} - 1 ) {
-                return ( @r, irange2cidrlist( $first, $last ) );
+                return ( @r, irange2cidrlist( $first, $last ) );    # XXX Add proto
             }
-            push( @r, irange2cidrlist( $first, $cidrs[0]->{IBASE} - 1 ) );
+            push( @r, irange2cidrlist( $first, $cidrs[0]->{IBASE} - 1 ) );    # XXX Add proto
         }
         last if $cidrs[0]->{IBASE} > $last;
         $first = $cidrs[0]->{IBASE} + $cidrs[0]->size;
         shift(@cidrs);
     }
     if ( $first <= $last ) {
-        push( @r, irange2cidrlist( $first, $last ) );
+        push( @r, irange2cidrlist( $first, $last ) );                         # XXX Add Proto
     }
     return @r;
 }
@@ -917,6 +938,7 @@ sub split    ## no critic: (Subroutines::ProhibitBuiltinHomonyms)
 # Credit: xenu, on IRC
 sub _log2 {
     my $n = shift;
+    my $proto = shift || 'IPv4';
 
     my $ret = 0;
     $ret++ while ( $n >>= 1 );
