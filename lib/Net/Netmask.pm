@@ -5,7 +5,6 @@
 package Net::Netmask;
 
 use 5.006_001;
-use integer;
 
 # ABSTRACT: Understand and manipulate IP netmasks
 
