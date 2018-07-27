@@ -231,8 +231,6 @@ sub imask {
 
 sub i6mask {
     my $bits = shift;
-    # We break into 4 32 bit chunks
-
     return Math::BigInt->new(2)->bpow(128) - Math::BigInt->new(2)->bpow( 128 - $bits );
 }
 
@@ -267,9 +265,6 @@ sub nth {
     return if $index >= $size;
 
     my $i = $ibase + $index;
-    if ( $this->{PROTOCOL} eq 'IPv6' ) {
-        my $max = Math::BigInt->new(2)->bpow(128);
-    }
     return int2ascii( $i, $this->{PROTOCOL} );
 }
 
@@ -591,31 +586,36 @@ sub findNetblock {
 }
 
 sub findOuterNetblock {
-    my ( $ipquad, $t ) = @_;
+    my ( $ipstr, $t ) = @_;
     $t = $remembered unless $t;
 
-    my $proto = 'IPv4';
+    my $proto;
+    my $maxbits;
 
     my $ip;
-    my $mask;
-    if ( ref($ipquad) ) {
-        $ip   = $ipquad->{IBASE};
-        $mask = $ipquad->{BITS};
+    my $len;
+    if ( ref($ipstr) ) {
+        $proto   = $ipstr->{PROTOCOL};
+        $maxbits = $proto eq 'IPv4' ? 32 : 128;
+        $ip      = $ipstr->{IBASE};
+        $len     = $ipstr->{BITS};
     } else {
-        $ip   = quad2int($ipquad);
-        $mask = 32;
+        $proto   = ( $ipstr =~ m/:/ ) ? 'IPv6' : 'IPv4';
+        $maxbits = $proto eq 'IPv4'   ? 32     : 128;
+        $ip = ascii2int( $ipstr, $proto );
+        $len = $maxbits;
     }
 
-    for ( my $bits = 0; $bits <= $mask; $bits++ ) {
-        my $nb = $ip & $imask[$bits];
+    for ( my $bits = 0; $bits <= $len; $bits++ ) {
+        my $nb = $ip & ( $proto eq 'IPv4' ? $imask[$bits] : $i6mask[$bits] );
         if ( $proto eq 'IPv6' ) {
             $nb = "0$nb";
         }
         next unless exists $t->{$nb};
-        my $mb = imaxblock( $nb, $mask );    # XXX Add proto
+        my $mb = imaxblock( $nb, $len, $proto );
         my $i = $bits - $mb;
-        confess "$mb, $bits, $ipquad, $nb" if $i < 0;
-        confess "$mb, $bits, $ipquad, $nb" if $i > 32;
+        confess "$mb, $bits, $ipstr, $nb" if $i < 0;
+        confess "$mb, $bits, $ipstr, $nb" if $i > $maxbits;
         while ( $i >= 0 ) {
             return $t->{$nb}->[$i]
               if defined $t->{$nb}->[$i];
@@ -626,25 +626,27 @@ sub findOuterNetblock {
 }
 
 sub findAllNetblock {
-    my ( $ipquad, $t ) = @_;
+    my ( $ipstr, $t ) = @_;
     $t = $remembered unless $t;
-    my @ary;
-    my $ip = quad2int($ipquad);
+
+    my $proto   = ( $ipstr =~ m/:/ ) ? 'IPv6' : 'IPv4';
+    my $maxbits = $proto eq 'IPv4'   ? 32     : 128;
+
+    my $ip = ascii2int( $ipstr, $proto );
+
     my %done;
-
-    my $proto = 'IPv4';
-
-    for ( my $bits = 32; $bits >= 0; $bits-- ) {
-        my $nb = $ip & $imask[$bits];
+    my @ary;
+    for ( my $bits = $maxbits; $bits >= 0; $bits-- ) {
+        my $nb = $ip & ( $proto eq 'IPv4' ? $imask[$bits] : $i6mask[$bits] );
         if ( $proto eq 'IPv6' ) {
             $nb = "0$nb";
         }
         next unless exists $t->{$nb};
-        my $mb = imaxblock( $nb, 32 );    # XXX Add Proto
+        my $mb = imaxblock( $nb, $maxbits, $proto );
         next if $done{$mb}++;
         my $i = $bits - $mb;
-        confess "$mb, $bits, $ipquad, $nb" if $i < 0;
-        confess "$mb, $bits, $ipquad, $nb" if $i > 32;
+        confess "$mb, $bits, $ipstr, $nb" if $i < 0;
+        confess "$mb, $bits, $ipstr, $nb" if $i > $maxbits;
         while ( $i >= 0 ) {
             push( @ary, $t->{$nb}->[$i] )
               if defined $t->{$nb}->[$i];
@@ -722,12 +724,25 @@ sub maxblock {
 sub nextblock {
     my ( $this, $index ) = @_;
     $index = 1 unless defined $index;
+    my $ibase = $this->{IBASE};
+    if ( $this->{PROTOCOL} eq 'IPv4' ) {
+        $ibase += $index * 2**( 32 - $this->{BITS} );
+    } else {
+        $ibase += $index * Math::BigInt->new(2)->bpow( 128 - $this->{BITS} );
+    }
+
     my $newblock = bless {
-        IBASE => $this->{IBASE} + $index * ( 2**( 32 - $this->{BITS} ) ),
-        BITS => $this->{BITS},
+        IBASE    => $ibase,
+        BITS     => $this->{BITS},
         PROTOCOL => $this->{PROTOCOL},
     };
-    return if $newblock->{IBASE} >= 2**32;
+
+    if ( $this->{PROTOCOL} eq 'IPv4' ) {
+        return if $newblock->{IBASE} >= 2**32;
+    } else {
+        return if $newblock->{IBASE} >= Math::BigInt->new(2)->bpow(128);
+    }
+
     return if $newblock->{IBASE} < 0;
     return $newblock;
 }
@@ -817,8 +832,18 @@ sub cidrs2contiglists {
 sub cidrs2cidrs {
     my (@cidrs) = sort_network_blocks(@_);
     my @result;
+
+    my $proto;
+    if ( scalar(@cidrs) ) {
+        $proto = $cidrs[0]->{PROTOCOL};
+        if ( grep { $proto ne $_->{PROTOCOL} } @cidrs ) {
+            confess("Cannot call cidrs2cidrs with mixed protocol arguments");
+        }
+    }
+
     while (@cidrs) {
         my (@r) = shift(@cidrs);
+
         my $max = $r[0]->{IBASE} + $r[0]->size;
         while ( $cidrs[0] && $cidrs[0]->{IBASE} <= $max ) {
             my $nm = $cidrs[0]->{IBASE} + $cidrs[0]->size;
@@ -827,7 +852,7 @@ sub cidrs2cidrs {
         }
         my $start = $r[0]->{IBASE};
         my $end   = $max - 1;
-        push( @result, irange2cidrlist( $start, $end ) );    # XXX Add proto
+        push( @result, irange2cidrlist( $start, $end, $proto ) );
     }
     return @result;
 }
@@ -835,25 +860,33 @@ sub cidrs2cidrs {
 sub cidrs2inverse {
     my $outer = shift;
     $outer = __PACKAGE__->new2($outer) || croak($error) unless ref($outer);
+
+    # cidrs2cidrs validates that everything is in the same address
+    # family
     my (@cidrs) = cidrs2cidrs(@_);
-    my $first   = $outer->{IBASE};
-    my $last    = $first + $outer->size() - 1;
+    my $proto;
+    if ( scalar(@cidrs) ) {
+        $proto = $cidrs[0]->{PROTOCOL};
+    }
+
+    my $first = $outer->{IBASE};
+    my $last  = $first + $outer->size() - 1;
     shift(@cidrs) while $cidrs[0] && $cidrs[0]->{IBASE} + $cidrs[0]->size < $first;
     my @r;
     while ( @cidrs && $first <= $last ) {
 
         if ( $first < $cidrs[0]->{IBASE} ) {
             if ( $last <= $cidrs[0]->{IBASE} - 1 ) {
-                return ( @r, irange2cidrlist( $first, $last ) );    # XXX Add proto
+                return ( @r, irange2cidrlist( $first, $last, $proto ) );
             }
-            push( @r, irange2cidrlist( $first, $cidrs[0]->{IBASE} - 1 ) );    # XXX Add proto
+            push( @r, irange2cidrlist( $first, $cidrs[0]->{IBASE} - 1, $proto ) );
         }
         last if $cidrs[0]->{IBASE} > $last;
         $first = $cidrs[0]->{IBASE} + $cidrs[0]->size;
         shift(@cidrs);
     }
     if ( $first <= $last ) {
-        push( @r, irange2cidrlist( $first, $last ) );                         # XXX Add Proto
+        push( @r, irange2cidrlist( $first, $last, $proto ) );
     }
     return @r;
 }
@@ -938,7 +971,6 @@ sub split    ## no critic: (Subroutines::ProhibitBuiltinHomonyms)
 # Credit: xenu, on IRC
 sub _log2 {
     my $n = shift;
-    my $proto = shift || 'IPv4';
 
     my $ret = 0;
     $ret++ while ( $n >>= 1 );
