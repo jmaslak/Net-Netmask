@@ -78,6 +78,8 @@ All functions understand both IPv4 and IPv6.  Matches, finds, etc,
 will always return false when an IPv4 address is matched against
 an IPv6 address.
 
+IPv6 support was added in 1.9104.
+
 =head1 CONSTRUCTING
 
 Net::Netmask objects are created with an IP address and optionally
