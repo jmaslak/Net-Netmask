@@ -42,6 +42,7 @@ MAIN: {
       2001:db8:100::/48           u             2001:db8:100::  ffff:ffff:ffff:: 48 40 IPv6     0
       2001:db8:100::              u             2001:db8:100::  ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff 128  40 IPv6  0
       2001:db8:100::1             u             2001:db8:100::1 ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff 128 128 IPv6  0
+      1:2:3:4:5:6:7:4/64          u             1:2:3:4::       ffff:ffff:ffff:ffff::                   64  62  IPv6  0
       default6                    u             ::              ::               0  0  IPv6  0
     );
 
@@ -141,21 +142,24 @@ MAIN: {
     ok( $x->size() == 4294967296, 'size of any netblock' );
 
     $x = Net::Netmask->new('::/0');
-    is( $x->size(), '340282366920938463463374607431768211456', "size of ::/0" );
+    is( $x->size(),     '340282366920938463463374607431768211456', "size of ::/0" );
+    is( $x->hostmask(), 'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff', "hostmask of ::/0" );
     @y = $x->inaddr();
     print "# REVERSE: @y\n";
     is( $y[0], 'ip6.arpa' );
     ok( !defined( $y[1] ), '!defined $y[1]' );
 
     $x = Net::Netmask->new('2001:db8:100::3');
-    is( $x->size(), '1', "size of 2001:db8:100::3" );
+    is( $x->size(),     '1',  "size of 2001:db8:100::3" );
+    is( $x->hostmask(), '::', "hostmask of 2001:db8:100::3" );
     @y = $x->inaddr();
     print "# REVERSE: @y\n";
     is( $y[0], '3.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1.0.8.b.d.0.1.0.0.2.ip6.arpa' );
     ok( !defined( $y[1] ), '!defined $y[1]' );
 
     $x = Net::Netmask->new('2001:db8:100::/48');
-    is( $x->size(), '1208925819614629174706176', "size of 2001:db8:100::/48" );
+    is( $x->size(),     '1208925819614629174706176',  "size of 2001:db8:100::/48" );
+    is( $x->hostmask(), '::ffff:ffff:ffff:ffff:ffff', "hostmask of 2001:db8:100::/48" );
     @y = $x->inaddr();
     print "# REVERSE: @y\n";
     is( $y[0], '0.0.1.0.8.b.d.0.1.0.0.2.ip6.arpa' );
@@ -255,6 +259,9 @@ MAIN: {
     ok( !( $newmask->match('192.168.2.1') ), 'match 192.168.2.1' );
     ok( ( ( 0 + $newmask->match('192.168.1.0') ) == 0 ), '0 + match 192.168.1.0' );
     ok( ( $newmask->match('192.168.1.0') ), 'match 192.168.1.0' );
+
+    $newmask = Net::Netmask->new("1:2:3:4::/64");
+    is( $newmask->next(), "1:2:3:5::", "next of 1:2:3:4::/64" );
 
     $newmask = Net::Netmask->new("2001:db8:100::/48");
     is( $newmask->broadcast(), "2001:db8:100:ffff:ffff:ffff:ffff:ffff", "Broadcast for IPv6" );
@@ -692,12 +699,13 @@ MAIN: {
     );
 
     my $table77 = {};
-    my $block77 = new2 Net::Netmask( "10.1.2.0/24", $table77 );
+    my $block77 = Net::Netmask->new2("10.1.2.0/24");
     $block77->storeNetblock();
     is( findNetblock( "10.2.1.0", $table77 ), undef );
 
     $table77 = {};
-    $block77 = new2 Net::Netmask( "2001:db8:cccc:1111::/64", $table77 );
+    $block77 = Net::Netmask->new2("2001:db8:cccc:1111::/64");
+    is( $Net::Netmask::error, undef, 'No error' );
     $block77->storeNetblock();
     is( findNetblock( "2001:db8:cccc:2222::", $table77 ), undef );
 

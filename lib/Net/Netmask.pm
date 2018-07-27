@@ -125,12 +125,14 @@ sub new {
             || ( $ibase & ~$imask[$bits] ) );
     } elsif ( $net =~ m,^([0-9a-f]*:[0-9a-f]*:[0-9a-f:]*)/([0-9]+)$, ) {
         # IPv6 with netmask - ex: 2001:db8::/32
-        # TODO: Need to validate the base matches the bits
+        if ( $mask ne '' ) { $error = "mask ignored for IPv6 address" }
         ( $base, $bits, $proto ) = ( $1, $2, 'IPv6' );
     } elsif ( $net =~ m,^([0-9a-f]*:[0-9a-f]*:[0-9a-f:]*)$, ) {
         # IPv6 without netmask - ex: 2001:db8::1234
+        if ( $mask ne '' ) { $error = "mask ignored for IPv6 address" }
         ( $base, $bits, $proto ) = ( $1, 128, 'IPv6' );
     } elsif ( $net eq 'default6' || $net eq 'any6' ) {
+        if ( $mask ne '' ) { $error = "mask ignored for IPv6 address" }
         ( $base, $bits, $proto ) = ( "::", 0, 'IPv6' );
     } else {
         $error = "could not parse $net";
@@ -208,7 +210,7 @@ sub next {    ## no critic: (Subroutines::ProhibitBuiltinHomonyms)
     if ( $this->{PROTOCOL} eq 'IPv4' ) {
         return int2quad( $this->{'IBASE'} + $this->size() );
     } else {
-        return $this->_ipv6next( $this->size() );
+        return $this->_ipv6next( $this->size );
     }
 }
 
@@ -247,7 +249,11 @@ sub mask {
 sub hostmask {
     my ($this) = @_;
 
-    return int2quad( ~$imask[ $this->{'BITS'} ] );
+    if ( $this->{PROTOCOL} eq 'IPv4' ) {
+        return int2quad( ~$imask[ $this->{BITS} ] );
+    } else {
+        return int2ascii( $i6mask[ $this->{BITS} ] ^ $i6mask[128], $this->{PROTOCOL} );
+    }
 }
 
 sub nth {
@@ -308,19 +314,9 @@ sub _ipv6next {
     my ( $this, $bitstep ) = @_;
 
     my $istart = $this->{IBASE};
+    my $val    = $istart + $bitstep;
 
-    my $val = $istart + $bitstep;
-
-    my $hex = $val->to_hex();
-
-    if ( length($hex) < 32 ) {
-        $hex = ( '0' x 32 - length($hex) ) . $hex;
-    }
-
-    my $ipaddr = $hex;
-    $ipaddr =~ s/(....)(?=....)/$1:/gsx;
-
-    return ipv6Cannonical($ipaddr);
+    return ipv6Cannonical( int2ascii( $val, $this->{PROTOCOL} ) );
 }
 
 sub inaddr {
