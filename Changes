@@ -1,6 +1,10 @@
 
 Revision history for Perl module Net::Netmask
 
+1.9105 2018-06-27
+
+ - IPv6 support is now GA!
+
 1.9104 2018-06-26
 
  - DEV release only
