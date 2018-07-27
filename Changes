@@ -1,10 +1,14 @@
 
 Revision history for Perl module Net::Netmask
 
-1.9104 ????-??-??
+1.9104 2018-06-26
+
+ - DEV release only
+ - IPv6 support
  - Add Code of Conduct
 
 1.9103 2018-06-18
+
  - Use ASCII-like regex matching (Github #4)
  - Convert tests to Test2
  - Pass perlcritic tests
@@ -14,6 +18,7 @@ Revision history for Perl module Net::Netmask
    'IPv4')
 
 1.9102 2018-06-18
+
  - DEV release only
  - Contains most changes that made it to 1.9103.
 
