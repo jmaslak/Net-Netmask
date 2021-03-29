@@ -165,7 +165,7 @@ to a true value.  Example:
   my $block = Net::Netmask->new2("216.240/16", shortnet => 1);
 
 or:
-  
+
   my $block = Net::Netmask->new("216.240/16", shortnet => 1);
 
 For compatibility with older codebases, it's also possible to change the
