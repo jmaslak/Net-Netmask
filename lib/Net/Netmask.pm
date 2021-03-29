@@ -1,6 +1,6 @@
 # Copyright (C) 1998-2006 David Muir Sharnoff <muir@idiom.org>
 # Copyright (C) 2011-2013 Google, Inc.
-# Copyright (C) 2018 Joelle Maslak <jmaslak@antelope.net>
+# Copyright (C) 2018-2021 Joelle Maslak <jmaslak@antelope.net>
 
 package Net::Netmask;
 
@@ -28,8 +28,7 @@ my %size2bits;
 my @imask;
 my @i6mask;
 
-# our %quadmask2bits;
-# our %quadhostmask2bits;
+our $SHORTNET_DEFAULT = undef;
 
 use vars qw($error $debug %quadmask2bits %quadhostmask2bits);
 $debug = 1;
@@ -46,9 +45,15 @@ use overload
   'fallback' => 1;
 
 sub new {
-    my ( $package, $net, $mask ) = @_;
+    my ( $package, $net, @params) = @_;
 
-    $mask = '' unless defined $mask;
+    my $mask = '';
+    if (@params % 2) {
+        $mask = shift(@params);
+        $mask = '' if !defined($mask);
+    }
+    my (%options) = @params;
+    my $shortnet = ( ( exists($options{shortnet}) && $options{shortnet} ) || $SHORTNET_DEFAULT );
 
     my $base;
     my $bits;
@@ -95,17 +100,17 @@ sub new {
         }
     } elsif ( $net =~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/ && !$mask ) {
         ( $base, $bits ) = ( $net, 32 );
-    } elsif ( $net =~ /^[0-9]+\.[0-9]+\.[0-9]+$/ && !$mask ) {
+    } elsif ( $net =~ /^[0-9]+\.[0-9]+\.[0-9]+$/ && !$mask && $shortnet ) {
         ( $base, $bits ) = ( "$net.0", 24 );
-    } elsif ( $net =~ /^[0-9]+\.[0-9]+$/ && !$mask ) {
+    } elsif ( $net =~ /^[0-9]+\.[0-9]+$/ && !$mask && $shortnet ) {
         ( $base, $bits ) = ( "$net.0.0", 16 );
-    } elsif ( $net =~ /^[0-9]+$/ && !$mask ) {
+    } elsif ( $net =~ /^[0-9]+$/ && !$mask && $shortnet ) {
         ( $base, $bits ) = ( "$net.0.0.0", 8 );
-    } elsif ( $net =~ m,^([0-9]+\.[0-9]+\.[0-9]+)/([0-9]+)$, ) {
+    } elsif ( $net =~ m,^([0-9]+\.[0-9]+\.[0-9]+)/([0-9]+)$, && $shortnet ) {
         ( $base, $bits ) = ( "$1.0", $2 );
-    } elsif ( $net =~ m,^([0-9]+\.[0-9]+)/([0-9]+)$, ) {
+    } elsif ( $net =~ m,^([0-9]+\.[0-9]+)/([0-9]+)$, && $shortnet ) {
         ( $base, $bits ) = ( "$1.0.0", $2 );
-    } elsif ( $net =~ m,^([0-9]+)/([0-9]+)$, ) {
+    } elsif ( $net =~ m,^([0-9]+)/([0-9]+)$, && $shortnet ) {
         ( $base, $bits ) = ( "$1.0.0.0", $2 );
     } elsif ( $net eq 'default' || $net eq 'any' ) {
         ( $base, $bits ) = ( "0.0.0.0", 0 );
@@ -389,7 +394,8 @@ sub tag {
 sub quad2int {
     my @bytes = split( /\./, $_[0] );
 
-    return unless @bytes == 4 && !grep { !( /[0-9]+$/ && $_ < 256 ) } @bytes;
+    return unless @bytes == 4;
+    return unless !grep { !( /^(([0-9])|([1-9][0-9]*))$/ && $_ < 256 ) } @bytes;
 
     return unpack( "N", pack( "C4", @bytes ) );
 }

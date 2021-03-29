@@ -132,6 +132,144 @@ my @tests = (
         error => qr/^could not parse /,
         type  => 'bad mask',
     },
+    # These do weird things that users almost certainly don't expect,
+    # creating a potential security issue.  I.E. all of the below IP
+    # addresses would be valid to inet_aton().
+    {
+        input => [ '1.131844', '32' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '0192.0.1.2', '32' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '192.00.1.2', '32' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '192.0.01.2', '32' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '192.0.1.02', '32' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '0xC0.0x1.0x3.0x4', '32' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '1.131844/32' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '0192.0.1.2/32' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '192.00.1.2/32' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '192.0.01.2/32' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '192.0.1.02/32' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '0xC0.0x1.0x3.0x4/32' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '1.131844' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '0192.0.1.2' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '192.00.1.2' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '0192.0.01.2' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '192.0.1.02' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '0xC0.0x1.0x3.0x4' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '10/8' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '10.0/8' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '10.0.0/8' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '10', '8' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '10.0', '8' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '10.0.0', '8' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '10', '8' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '10.0' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
+    {
+        input => [ '10.0.0' ],
+        error => qr/^could not parse /,
+        type  => 'ambiguous',
+    },
 );
 
 foreach my $test (@tests) {

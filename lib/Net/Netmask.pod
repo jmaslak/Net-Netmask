@@ -105,22 +105,6 @@ The preferred IPv6 form.
 
 A /32 block.
 
-=item '216.240.32'
-
-Always a /24 block.
-
-=item '216.240'
-
-Always a /16 block.
-
-=item '140'
-
-Always a /8 block.
-
-=item '216.240.32/24'
-
-=item '216.240/16'
-
 =item 'default' or 'any'
 
 0.0.0.0/0 (the default route)
@@ -151,6 +135,65 @@ could not figure out what the network block should be.
 
 With C<new>, the error string can be found as $block->{'ERROR'}.  With
 C<new2> the error can be found as Net::Netmask::errstr or $Net::Netmask::error.
+
+As of version 2.000, the following abbreviated IPv4 netblocks are not accepted
+by default, but can be accepted with options.
+
+=over 32
+
+=item '216.240.32'
+
+Always a /24 block.
+
+=item '216.240'
+
+Always a /16 block.
+
+=item '140'
+
+Always a /8 block.
+
+=item '216.240.32/24'
+
+=item '216.240/16'
+
+=back
+
+To accept these, you can call the constructor with a "shortnet" option set
+to a true value.  Example:
+
+  my $block = Net::Netmask->new2("216.240/16", shortnet => 1);
+
+or:
+  
+  my $block = Net::Netmask->new("216.240/16", shortnet => 1);
+
+For compatibility with older codebases, it's also possible to change the
+default to use the old behavior.  To do this, you can set the
+C<$Net::Netmask::SHORTNET_DEFAULT> variable to a true value. It is recommended
+that this be done by localizing the variable. Example:
+
+  local $Net::Netmask::SHORTNET_DEFAULT = 1
+  my $block = Net::Netmask->new2("216.240/16");
+
+Please be aware that there are security implications to this as other Perl
+modules, system libraries, or utilities may not parse these addresses the
+same way.  This is why the default was changed.
+
+For instance:
+
+  perl -MNet::Netmask -E "say Net::Netmask->new("10.20", shortnet => 1)"
+
+Will print "10.2.0.0/16".  However:
+
+  perl -MSocket -E "say inet_ntoa(inet_aton('10.20'))"
+
+Will often print "10.0.0.20" which is obviously very different, and if
+the Net::Netmask module was used to check an IP aggainst an ACL, and then
+another program was executed (that uses inet_aton(), for instance), the ACL
+processing might not match the connection.
+
+Thus, it is advised to use this with caution.
 
 =head1 METHODS
 
@@ -510,7 +553,7 @@ Copyright (C) 1998-2006 David Muir Sharnoff.
 
 Copyright (C) 2011-2013 Google, Inc.
 
-Copyright (C) 2018 Joelle Maslak
+Copyright (C) 2018-2021 Joelle Maslak
 
 This module may be used, modified and redistributed under the same
 terms as Perl itself.

@@ -1,5 +1,19 @@
-
 Revision history for Perl module Net::Netmask
+
+2.0000 2021-03-29
+
+ - SECURITY: IPv4 addresses with leading zeros are no longer allowed.
+   They will return a parse error like any invalid IP address.
+ - SECURITY: 10.0.0, 10.0, and 10 address portions now by default return
+   a parse error.  This can be overriden by calling new() like:
+     Net::Netmask->new2('10/8', shortnet => 1);     # or new()
+   or
+     Net::Netmask->new2('10', '8', shortnet => 1);  # or new()
+
+   There is also a package-level variable that can change the default
+   when "shortnet" isn't used passed into the constructor. Usage:
+     local $Net::Netmask::SHORTNET_DEFAULT = 1;
+     Net::Netmask->new('10', '8');  # or new2()
 
 1.9104 2018-06-27
 
