@@ -156,10 +156,15 @@ sub new {
         $bits = 128;
     }
 
-    $ibase = ascii2int( ( $base || '::' ), $proto ) unless defined $ibase;
+    $ibase = ascii2int( ( $base || '::' ), $proto ) unless (defined $ibase or $error);
     unless ( defined($ibase) || defined($error) ) {
         $error = "could not parse $net";
         $error .= " $mask" if $mask;
+    }
+
+    if ($error) {
+        $ibase = 0;
+        $bits  = 0;
     }
 
     $ibase = i_getnet_addr( $ibase, $bits, $proto );
@@ -185,6 +190,10 @@ sub i_getnet_addr {
 }
 
 sub new2 {
+    goto &safe_new;
+}
+
+sub safe_new {
     local ($debug) = 0;
     my $net = new(@_);
     return if $error;

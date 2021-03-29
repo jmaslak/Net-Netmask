@@ -270,6 +270,11 @@ my @tests = (
         error => qr/^could not parse /,
         type  => 'ambiguous',
     },
+    {
+        input => [ '2001::/129' ],
+        error => qr/^illegal number of bits/,
+        type  => 'bad mask',
+    },
 );
 
 foreach my $test (@tests) {
@@ -278,15 +283,21 @@ foreach my $test (@tests) {
     my $name  = ( join ', ', @{ $test->{input} } );
     my $type  = $test->{type};
 
-    my $result = Net::Netmask->new2(@$input);
-
+    my $result = Net::Netmask->safe_new(@$input);
     is( $result, undef, "$name $type" );
     like( Net::Netmask->errstr, $err, "$name errstr mismatch" );
+
+    warns { $result = Net::Netmask->new(@$input) };
+    if ($result->{PROTOCOL} eq 'IPv4') {
+        is( "$result", "0.0.0.0/0", "result is 0.0.0.0/0" );
+    } else {
+        is( "$result", "::/0", "result is 0.0.0.0/0" );
+    }
 }
 
 # test whois numbers with space between dash (valid!)
-ok( Net::Netmask->new2('209.157.64.0 - 209.157.95.255'), "whois with single space around dash" );
-ok( Net::Netmask->new2('209.157.64.0   -   209.157.95.255'),
+ok( Net::Netmask->safe_new('209.157.64.0 - 209.157.95.255'), "whois with single space around dash" );
+ok( Net::Netmask->safe_new('209.157.64.0   -   209.157.95.255'),
     "whois with mulitple spaces around dash" );
 
 done_testing;

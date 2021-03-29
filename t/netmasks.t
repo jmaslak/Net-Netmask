@@ -708,8 +708,19 @@ MAIN: {
     $block77->storeNetblock();
     is( findNetblock( "10.2.1.0", $table77 ), undef );
 
+    my $table77 = {};
+    my $block77 = Net::Netmask->safe_new("10.1.2.0/24");
+    $block77->storeNetblock();
+    is( findNetblock( "10.2.1.0", $table77 ), undef );
+
     $table77 = {};
     $block77 = Net::Netmask->new2("2001:db8:cccc:1111::/64");
+    is( $Net::Netmask::error, undef, 'No error' );
+    $block77->storeNetblock();
+    is( findNetblock( "2001:db8:cccc:2222::", $table77 ), undef );
+
+    $table77 = {};
+    $block77 = Net::Netmask->safe_new("2001:db8:cccc:1111::/64");
     is( $Net::Netmask::error, undef, 'No error' );
     $block77->storeNetblock();
     is( findNetblock( "2001:db8:cccc:2222::", $table77 ), undef );
